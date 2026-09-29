@@ -46,6 +46,8 @@
   .card .summary { font-size: 14px; margin-bottom: 12px; }
   .card ul { margin: 0 0 14px; padding-left: 18px; font-size: 13.5px; color: #c9d1d9; }
   .card li { margin-bottom: 5px; }
+  .card code { background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+    padding: 1px 5px; font-family: var(--mono); font-size: 0.92em; }
   .card .actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .card .actions a { font-size: 12.5px; font-family: var(--mono); color: var(--accent);
     text-decoration: none; border: 1px solid var(--accent-dim); border-radius: 6px; padding: 5px 10px; }
@@ -179,11 +181,18 @@
     </div>
     <img class="game-shot" src="docs/idle-runtime/screenshot.png" alt="실제 구현한 하드웨어 업그레이드 화면">
     <ul>
-      <li>CPS(초당 크레딧 획득량) 중심의 경제 구조: 자동 해킹(실시간 CPS)과 수동 클릭(위협도의 5% 추가 데미지)을
-        같은 재화로 수렴시켜 하이브리드 방치형 루프를 설계</li>
-      <li>메가코프 서버 해킹을 5단계 보안 레이어(방화벽 → 게이트키퍼 → 메인프레임 등)로 나누고,
-        보스전 실패 시 이전 단계로 후퇴해 파밍 모드로 전환되는 진행 로직 설계</li>
-      <li>CPU/RAM/Network 3축 하드웨어 성장 시스템과 시각적 피드백(LED 색상·배경 변화)을 별도 문서로 정리</li>
+      <li>성장을 하드웨어(리셋 시 0으로 초기화)·해킹 툴(슬롯만 초기화, 영구 소장)·악명(영구 누적) 3축으로 나누고,
+        축마다 리셋 정책을 다르게 설계해 인플레이션 쾌감·전략성·명예라는 서로 다른 재미를 배치</li>
+      <li>업그레이드 비용을 <code>baseCost × 1.15^레벨</code> 지수 공식으로 설계해, 무한 성장을 허용하면서도
+        후반으로 갈수록 체감 성장 속도를 조절</li>
+      <li>오프라인(복귀) 보상 = CPS × 경과시간 × 배율(기본 0.5배, 전용 툴 보유 시 1.0배), 최대 12시간 누적,
+        서버 타임스탬프로 검증해 시간 조작을 방지</li>
+      <li>메가코프 공략을 위협도(DPS) vs 보안 수준(HP) 체크로 단순화하고, 5단계 보안 레이어
+        (외부 방화벽 → 게이트키퍼 → 메인프레임)로 계단식 난이도를 설계, 실패 시 파밍 모드로 자동 전환 후 재도전</li>
+      <li>크레딧 표기를 K/M/B 단위로 자동 전환하고, 획득 경로를 해킹·오프라인 보상·업적·라이브 이벤트
+        4종으로 다각화해 경제 루프에 굴곡을 줌</li>
+      <li>소셜 시스템의 기획 의도를 "혼자 하지만 거대한 해커 네트워크의 일원"이라는 방치형 게임 특유의
+        고독함 해소로 정의하고, 글로벌 알림·익명 채팅으로 구현</li>
     </ul>
     <div class="thumbstrip">
       <a href="docs/idle-runtime/game-design.pdf"><img src="docs/idle-runtime/thumbs/game-design-1.png" alt="기획서"><div class="cap">기획서 개요</div></a>
