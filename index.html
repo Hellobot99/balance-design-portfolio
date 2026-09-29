@@ -63,6 +63,9 @@
   .formula-shot { display: block; max-width: 100%; border: 1px solid var(--border); border-radius: 6px;
     background: #fff; padding: 10px 14px; margin: 4px 0 14px; }
 
+  .game-shot { display: block; max-width: 100%; border: 1px solid var(--border); border-radius: 6px;
+    margin: 4px 0 14px; }
+
   footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border);
     font-size: 12.5px; color: var(--text-dim); }
 </style>
@@ -164,6 +167,7 @@
       해킹(자동/수동) → 크레딧 획득 → 하드웨어·악명(환생) 업그레이드 → 상위 티어 해킹이며,
       경제·성장·소셜/라이브·UI/UX를 각각 별도 문서로 기획하고 실제 서버·클라이언트까지 직접 구현했습니다.
     </div>
+    <img class="game-shot" src="docs/idle-runtime/screenshot.png" alt="실제 구현한 하드웨어 업그레이드 화면">
     <ul>
       <li>CPS(초당 크레딧 획득량) 중심의 경제 구조: 자동 해킹(실시간 CPS)과 수동 클릭(위협도의 5% 추가 데미지)을
         같은 재화로 수렴시켜 하이브리드 방치형 루프를 설계</li>
