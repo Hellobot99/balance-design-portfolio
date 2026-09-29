@@ -33,10 +33,13 @@
   .intro { color: var(--text-dim); font-size: 14.5px; margin: 24px 0 16px; }
   .intro b { color: var(--text); font-weight: 600; }
 
-  .about-grid { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 40px; overflow: hidden; }
-  .about-row { display: flex; gap: 16px; padding: 10px 16px; font-size: 13.5px; }
-  .about-row:not(:last-child) { border-bottom: 1px solid var(--border); }
-  .about-label { flex: 0 0 90px; color: var(--text-dim); font-family: var(--mono); font-size: 12px; padding-top: 1px; }
+  .timeline { list-style: none; margin: 0 0 40px; padding: 0 0 0 18px; position: relative; }
+  .timeline::before { content: ''; position: absolute; left: 3px; top: 6px; bottom: 6px; width: 1px; background: var(--border); }
+  .timeline li { position: relative; padding: 0 0 14px 20px; font-size: 13.5px; color: #c9d1d9; }
+  .timeline li::before { content: ''; position: absolute; left: -18px; top: 5px; width: 7px; height: 7px;
+    border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); }
+  .timeline-date { display: inline-block; min-width: 60px; color: var(--text-dim); font-family: var(--mono);
+    font-size: 11.5px; margin-right: 4px; }
 
   .note { background: #1c2128; border: 1px solid var(--border); border-left: 3px solid var(--accent);
     border-radius: 6px; padding: 12px 16px; font-size: 13px; color: var(--text-dim); margin-bottom: 40px; }
@@ -102,11 +105,13 @@
     이 페이지는 그 과정에서 나온 결과물을 정리한 기록입니다.
   </div>
 
-  <div class="about-grid">
-    <div class="about-row"><span class="about-label">소속</span><span>경북대학교 컴퓨터학부 글로벌SW전공 4학년 (계명대 컴퓨터공학전공에서 편입)</span></div>
-    <div class="about-row"><span class="about-label">교환학생</span><span>일본 시바우라공업대학(芝浦工業大学) 재학 중, 2027년 7월 졸업 예정</span></div>
-    <div class="about-row"><span class="about-label">방향</span><span>게임 서버 개발을 공부하다가, 밸런스/시스템 기획자로 목표를 바꿔 준비 중</span></div>
-  </div>
+  <ul class="timeline">
+    <li><span class="timeline-date">학력</span>계명대학교 컴퓨터공학전공 입학, 2년 수료 후 경북대학교 컴퓨터학부 글로벌SW전공으로 편입</li>
+    <li><span class="timeline-date">병역</span>육군 병장 만기전역</li>
+    <li><span class="timeline-date">교환학생</span>일본 시바우라공업대학교(芝浦工業大学) 재학 중</li>
+    <li><span class="timeline-date">2027.07</span>경북대학교 컴퓨터학부 글로벌SW전공 졸업 예정</li>
+    <li><span class="timeline-date">현재</span>게임 서버 개발을 공부하다가, 밸런스/시스템 기획자로 방향을 바꿔 준비 중</li>
+  </ul>
 
   <div class="note">
     화려하게 꾸미기보다, <b>무엇을 직접 결정하고 어떻게 검증했는지</b>가 드러나도록
