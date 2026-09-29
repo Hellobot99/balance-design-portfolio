@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>전투 계산기 디버그 도구</title>
+<style>
+  body { font-family: sans-serif; max-width: 900px; margin: 24px auto; padding: 0 16px; background: #f4f4f4; }
+  h1 { font-size: 18px; }
+  .warn { background: #fff3cd; border: 1px solid #f0c36d; padding: 8px 12px; border-radius: 6px; font-size: 13px; }
+  fieldset { margin: 12px 0; }
+  label { display: inline-block; width: 140px; }
+  #log { background: #111; color: #ddd; font-family: monospace; font-size: 13px; padding: 12px; height: 260px; overflow-y: auto; border-radius: 6px; white-space: pre-wrap; margin-top: 12px; }
+  button { padding: 8px 16px; font-size: 14px; cursor: pointer; }
+  #result { font-weight: bold; margin: 8px 0; font-size: 15px; }
+
+  .battlefield { display: flex; justify-content: space-between; gap: 24px; margin-top: 16px; }
+  .side { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .side.enemy { align-items: flex-end; }
+  .unit-card { background: #fff; border: 1px solid #ccc; border-radius: 8px; padding: 8px 10px; display: flex; align-items: center; gap: 10px; width: 100%; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: opacity 0.3s; }
+  .unit-card.dead { opacity: 0.35; }
+  .unit-card img { width: 56px; height: 56px; object-fit: contain; border-radius: 6px; background: #f0f0f0; flex-shrink: 0; }
+  .unit-info { flex: 1; min-width: 0; }
+  .unit-name { font-size: 13px; font-weight: bold; }
+  .unit-sub { font-size: 11px; color: #666; }
+  .hp-bar-bg { background: #ddd; border-radius: 4px; height: 10px; margin-top: 4px; overflow: hidden; }
+  .hp-bar-fill { background: #4caf50; height: 100%; transition: width 0.4s; }
+  .hp-bar-fill.low { background: #e53935; }
+  .hp-text { font-size: 10px; color: #444; margin-top: 2px; }
+</style>
+</head>
+<body>
+  <h1>몬스터 배틀 JRPG — 전투 프로토타입</h1>
+  <div class="warn">
+    이미지 6종은 확정 디자인이 아니라 예시 컨셉아트입니다. 스탯 곡선, 몬스터 수치, 방어상수, 스킬 배율, 속성 상성표도
+    전부 <b>임시값</b>입니다. RPG_밸런스기획서.xlsx에 실제 값이 정해지면 <code>web/data/*.json</code>에 옮겨야 합니다.
+  </div>
+
+  <fieldset>
+    <legend>파티 레벨 / 장비</legend>
+    <div><label>탱커</label><input type="number" id="lv-tank" value="10" min="1" max="30" /></div>
+    <div><label>물리딜러</label><input type="number" id="lv-phys" value="10" min="1" max="30" /></div>
+    <div><label>마법딜러·힐러</label><input type="number" id="lv-mage" value="10" min="1" max="30" /></div>
+    <div style="margin-top:6px;"><label>장비 장착 (C4)</label><input type="checkbox" id="equip-toggle" checked /></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>상대 몬스터</legend>
+    <select id="monster-select"></select>
+  </fieldset>
+
+  <button id="run-btn">전투 시작</button>
+  <div id="result"></div>
+
+  <div class="battlefield">
+    <div class="side player" id="party-side"></div>
+    <div class="side enemy" id="enemy-side"></div>
+  </div>
+
+  <div id="log"></div>
+
+  <script src="js/combat.js"></script>
+  <script>
+    let species, monstersData, elementsData, config, skillDefs, equipmentData;
+
+    async function loadData() {
+      const [sp, mo, el, cf, sk, eq] = await Promise.all([
+        fetch("data/species.json").then((r) => r.json()),
+        fetch("data/monsters.json").then((r) => r.json()),
+        fetch("data/elements.json").then((r) => r.json()),
+        fetch("data/config.json").then((r) => r.json()),
+        fetch("data/skills.json").then((r) => r.json()),
+        fetch("data/equipment.json").then((r) => r.json()),
+      ]);
+      species = sp.species;
+      monstersData = mo;
+      elementsData = el;
+      config = cf;
+      skillDefs = sk;
+      equipmentData = eq;
+      const sel = document.getElementById("monster-select");
+      sel.innerHTML = monstersData.monsters.map((m, i) => `<option value="${i}">${m.name} (Lv${m.level})</option>`).join("");
+    }
+
+    function buildParty() {
+      const byId = Object.fromEntries(species.map((s) => [s.id, s]));
+      const lvTank = parseInt(document.getElementById("lv-tank").value, 10);
+      const lvPhys = parseInt(document.getElementById("lv-phys").value, 10);
+      const lvMage = parseInt(document.getElementById("lv-mage").value, 10);
+      const useEquip = document.getElementById("equip-toggle").checked;
+      const equip = useEquip ? equipmentData.playerEquipment : null;
+      const party = [
+        buildFromSpecies(byId["tank"], lvTank, equip),
+        buildFromSpecies(byId["phys_dps"], lvPhys, equip),
+        buildFromSpecies(byId["mage_healer"], lvMage, equip),
+      ];
+      party.forEach((u, i) => (u.image = byId[["tank", "phys_dps", "mage_healer"][i]].image));
+      return party;
+    }
+
+    function buildEnemies() {
+      const idx = parseInt(document.getElementById("monster-select").value, 10);
+      const def = monstersData.monsters[idx];
+      const enemy = buildFromMonster(def, monstersData.baseStats);
+      enemy.image = def.image;
+      return [enemy];
+    }
+
+    function renderUnitCard(u) {
+      const pct = Math.max(0, Math.round((u.hp / u.maxHp) * 100));
+      const lowClass = pct <= 30 ? "low" : "";
+      const deadClass = u.alive ? "" : "dead";
+      return `
+        <div class="unit-card ${deadClass}" data-id="${u.id}-${u.side}">
+          <img src="${u.image}" alt="${u.name}" />
+          <div class="unit-info">
+            <div class="unit-name">${u.name} ${u.equippedName ? "🗡" : ""}</div>
+            <div class="unit-sub">Lv${u.level} · ${u.role} · ${u.element || "-"}</div>
+            <div class="hp-bar-bg"><div class="hp-bar-fill ${lowClass}" style="width:${pct}%"></div></div>
+            <div class="hp-text">${u.hp} / ${u.maxHp}</div>
+          </div>
+        </div>`;
+    }
+
+    function renderBattlefield(party, enemies) {
+      document.getElementById("party-side").innerHTML = party.map(renderUnitCard).join("");
+      document.getElementById("enemy-side").innerHTML = enemies.map(renderUnitCard).join("");
+    }
+
+    document.getElementById("run-btn").addEventListener("click", () => {
+      const logEl = document.getElementById("log");
+      const resultEl = document.getElementById("result");
+      logEl.textContent = "";
+      const lines = [];
+      const party = buildParty();
+      const enemies = buildEnemies();
+      const battle = new Battle({
+        party, enemies, config, elementsData, skillDefs,
+        log: (msg) => lines.push(msg),
+      });
+      const outcome = battle.run();
+      renderBattlefield(party, enemies);
+      logEl.textContent = lines.join("\n");
+      logEl.scrollTop = logEl.scrollHeight;
+      resultEl.textContent = `결과: ${outcome.result} (총 ${outcome.turns}턴)`;
+    });
+
+    loadData().then(() => {
+      renderBattlefield(buildParty(), buildEnemies());
+    });
+  </script>
+</body>
+</html>

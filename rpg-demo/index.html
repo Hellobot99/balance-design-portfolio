@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>몬스터 배틀 JRPG (프로토타입)</title>
+<style>
+  body { font-family: sans-serif; max-width: 900px; margin: 24px auto; padding: 0 16px; background: #f4f4f4; }
+  h1 { font-size: 18px; }
+  h2 { font-size: 16px; margin-top: 0; }
+  .warn { background: #fff3cd; border: 1px solid #f0c36d; padding: 8px 12px; border-radius: 6px; font-size: 13px; }
+  .screen { display: none; margin-top: 16px; }
+  button { padding: 8px 16px; font-size: 14px; cursor: pointer; margin: 4px 4px 4px 0; }
+  #town-status, #battle-result { font-weight: bold; margin: 10px 0; }
+
+  /* 포켓몬풍 전투 화면 */
+  .battle-scene {
+    position: relative; height: 380px; margin-top: 14px;
+    border: 4px solid #2b2b2b; border-radius: 12px; overflow: hidden;
+    background: linear-gradient(to bottom, #bfe6ff 0%, #bfe6ff 56%, #8fd18f 56%, #6fb56f 100%);
+  }
+  .enemy-boxes { position: absolute; top: 14px; left: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .enemy-sprites { position: absolute; top: 30px; right: 40px; display: flex; gap: 12px; align-items: flex-end; }
+  .enemy-sprites img { width: 130px; filter: drop-shadow(3px 6px 4px rgba(0,0,0,0.35)); }
+  .party-row { position: absolute; bottom: 14px; left: 14px; right: 14px; display: flex; justify-content: space-between; gap: 10px; }
+
+  .poke-box { background: #fdf6e3; border: 3px solid #333; border-radius: 10px; padding: 6px 12px; min-width: 190px; box-shadow: 2px 3px 0 rgba(0,0,0,0.25); }
+  .poke-box.dead { opacity: 0.4; }
+  .poke-box.mon-card { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+  .poke-box.mon-card img { width: 44px; height: 44px; object-fit: contain; flex-shrink: 0; }
+  .poke-name-row { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: bold; white-space: nowrap; }
+  .poke-hp-label { font-size: 9px; font-weight: bold; color: #d99a00; letter-spacing: 1px; margin-top: 2px; }
+  .poke-hp-bar-bg { background: #444; border-radius: 3px; height: 7px; margin-top: 2px; overflow: hidden; }
+  .poke-hp-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s; background: #4caf50; }
+  .poke-hp-bar-fill.yellow { background: #ffca28; }
+  .poke-hp-bar-fill.red { background: #e53935; }
+  .poke-hp-text { font-size: 9px; text-align: right; margin-top: 1px; color: #333; }
+
+  /* 타격감: 때리는 쪽은 튀어나갔다 돌아오고, 맞는 쪽은 흔들리며 붉게 번쩍 */
+  @keyframes lungeRight { 0%{transform:translateX(0);} 35%{transform:translateX(16px);} 100%{transform:translateX(0);} }
+  @keyframes lungeLeft { 0%{transform:translateX(0);} 35%{transform:translateX(-16px);} 100%{transform:translateX(0);} }
+  @keyframes hitShake {
+    0%,100%{transform:translateX(0); filter:brightness(1);}
+    15%{transform:translateX(-7px); filter:brightness(2) saturate(3) hue-rotate(-20deg);}
+    35%{transform:translateX(6px);}
+    55%{transform:translateX(-5px);}
+    75%{transform:translateX(3px); filter:brightness(1);}
+  }
+  @keyframes healGlow {
+    0%,100%{filter:brightness(1) drop-shadow(0 0 0 rgba(120,255,120,0));}
+    40%{filter:brightness(1.4) drop-shadow(0 0 10px rgba(120,255,120,0.9));}
+  }
+  .anim-attack-player img { animation: lungeRight 0.5s ease; }
+  .anim-attack-enemy img { animation: lungeLeft 0.5s ease; }
+  .anim-hit img { animation: hitShake 0.5s ease; }
+  .anim-heal img { animation: healGlow 0.6s ease; }
+
+  .message-box { margin-top: 10px; background: #fff; border: 4px solid #2b2b2b; border-radius: 8px; padding: 14px 18px; font-size: 15px; font-weight: 700; min-height: 22px; }
+  details.log-details { margin-top: 8px; }
+  details.log-details summary { cursor: pointer; font-size: 12px; color: #555; }
+  #battle-log { background: #111; color: #ddd; font-family: monospace; font-size: 12px; padding: 10px; height: 150px; overflow-y: auto; border-radius: 6px; white-space: pre-wrap; margin-top: 6px; }
+</style>
+</head>
+<body>
+  <h1>몬스터 배틀 JRPG (프로토타입)</h1>
+  <div class="warn">
+    스탯 곡선, 몬스터 수치, 방어상수, 스킬, 상점/여관 값은 전부 <b>임시값</b>입니다. 파티 3종족은 항상 같은
+    레벨/경험치를 공유하도록 단순화했습니다(실제 설계는 개별 레벨로 바꿀 수 있음). 전투 계산기만 따로 시험해보려면
+    <a href="debug.html">debug.html</a>을 여세요.
+  </div>
+
+  <!-- 타이틀 -->
+  <div class="screen" id="screen-title" style="display:block;">
+    <h2>타이틀</h2>
+    <button id="title-start-btn">게임 시작</button>
+  </div>
+
+  <!-- 마을 -->
+  <div class="screen" id="screen-town">
+    <h2>마을</h2>
+    <div id="town-status"></div>
+    <button id="town-inn-btn">여관 (전원 회복, 무료·임시)</button>
+    <button id="town-field-btn">필드로 이동</button>
+  </div>
+
+  <!-- 필드 -->
+  <div class="screen" id="screen-field">
+    <h2>필드 — 스테이지 선택 (지역당 5스테이지, D3)</h2>
+    <div id="field-stages"></div>
+    <button id="field-back-btn">마을로</button>
+  </div>
+
+  <!-- 전투 -->
+  <div class="screen" id="screen-battle">
+    <h2>전투</h2>
+    <div class="battle-scene">
+      <div class="enemy-boxes" id="enemy-boxes"></div>
+      <div class="enemy-sprites" id="enemy-sprites"></div>
+      <div class="party-row" id="party-row"></div>
+    </div>
+    <div class="message-box" id="message-box">전투 시작!</div>
+    <details class="log-details">
+      <summary>전체 로그 보기</summary>
+      <div id="battle-log"></div>
+    </details>
+    <div id="battle-result"></div>
+    <button id="battle-next-btn" style="display:none;">계속</button>
+  </div>
+
+  <script src="js/combat.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>

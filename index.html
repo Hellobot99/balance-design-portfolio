@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>김태준 — 밸런스/시스템 기획 포트폴리오</title>
+<meta name="description" content="게임 서버 개발자에서 밸런스/시스템 기획자로 전환하며 직접 설계·구현·검증한 프로젝트 기록">
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-card: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --accent: #d29922;
+    --accent-dim: #9e6a03;
+    --good: #3fb950;
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.65; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 48px 20px 80px; }
+
+  header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px;
+    padding-bottom: 28px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+  header h1 { margin: 0 0 6px; font-size: 26px; font-weight: 700; }
+  header .role { color: var(--text-dim); font-size: 14px; }
+  .links { display: flex; gap: 10px; flex-wrap: wrap; }
+  .links a { color: var(--text); text-decoration: none; font-size: 13px; font-family: var(--mono);
+    padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; transition: border-color .15s, color .15s; }
+  .links a:hover { border-color: var(--accent); color: var(--accent); }
+
+  .intro { color: var(--text-dim); font-size: 14.5px; margin: 24px 0 40px; }
+  .intro b { color: var(--text); font-weight: 600; }
+
+  .note { background: #1c2128; border: 1px solid var(--border); border-left: 3px solid var(--accent);
+    border-radius: 6px; padding: 12px 16px; font-size: 13px; color: var(--text-dim); margin-bottom: 40px; }
+
+  h2.section { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim);
+    margin: 40px 0 16px; }
+
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 22px 24px; margin-bottom: 18px; }
+  .card h3 { margin: 0 0 4px; font-size: 17px; }
+  .card .meta { color: var(--text-dim); font-size: 12.5px; font-family: var(--mono); margin-bottom: 10px; }
+  .card .summary { font-size: 14px; margin-bottom: 12px; }
+  .card ul { margin: 0 0 14px; padding-left: 18px; font-size: 13.5px; color: #c9d1d9; }
+  .card li { margin-bottom: 5px; }
+  .card .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .card .actions a { font-size: 12.5px; font-family: var(--mono); color: var(--accent);
+    text-decoration: none; border: 1px solid var(--accent-dim); border-radius: 6px; padding: 5px 10px; }
+  .card .actions a:hover { background: rgba(210,153,34,0.12); }
+  .card.ref { opacity: 0.85; }
+  .card.ref .meta { color: var(--good); }
+
+  footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border);
+    font-size: 12.5px; color: var(--text-dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>김태준</h1>
+      <div class="role">밸런스 / 시스템 기획 · 경북대 컴퓨터공학과 4학년</div>
+    </div>
+    <div class="links">
+      <a href="mailto:ktj4060@gmail.com">Email</a>
+      <a href="https://github.com/Hellobot99">GitHub</a>
+      <a href="https://hellobot99.github.io">게임 서버 개발 포트폴리오</a>
+    </div>
+  </header>
+
+  <div class="intro">
+    IOCP 기반 게임 서버를 직접 만들어본 경험을 바탕으로, <b>2026년 하반기부터 밸런스/시스템 기획으로 전환</b>해 실습 중입니다.
+    강의와 책으로 배운 내용을 매번 직접 수치·코드로 만들어 검증하는 방식으로 공부하고 있고,
+    이 페이지는 그 과정에서 나온 결과물을 정리한 기록입니다.
+  </div>
+
+  <div class="note">
+    전환한 지 아직 오래되지 않았습니다. 화려하게 꾸미기보다, <b>무엇을 직접 결정하고 어떻게 검증했는지</b>가 드러나도록
+    과정 위주로 정리했습니다. 각 카드의 데모/문서는 실제로 열어볼 수 있습니다.
+  </div>
+
+  <h2 class="section">밸런스 / 시스템 기획</h2>
+
+  <div class="card">
+    <h3>몬스터 배틀 JRPG — 전투·성장 시스템 처음부터 설계</h3>
+    <div class="meta">2026.09 · 오리지널 IP · 전투 공식 / 스탯 설계 / 웹 구현</div>
+    <div class="summary">
+      정통 JRPG 파티 구조(탱커 · 물리딜러 · 마법딜러/힐러 3인)를 오리지널 몬스터로 재구성해,
+      전투 공식부터 레벨 성장 곡선까지 직접 설계하고 웹으로 구현해 실제 플레이 가능한 상태까지 만들었습니다.
+    </div>
+    <ul>
+      <li>대미지 공식을 3차례 재설계 — ATK를 모든 공격의 기본값으로 두고, 힘/지력을 <b>스킬별 계수(coefs)</b>로 분리해
+        스킬마다 물리/마법 배분을 독립적으로 가질 수 있는 구조로 일반화</li>
+      <li>"가치 검증" 표를 직접 만들어 탱커/물리딜러/마법딜러 3종족의 종합 전투력을 Lv1·Lv30 기준
+        <b>100% / 100% / 100%</b>로 정확히 맞춤 (ATK·DEF·HP·힘·지력의 환산 배율을 역산해서 결정)</li>
+      <li>보스를 고정 개체 대신 "무작위 몬스터 + 별도 결정한 보스 배율"로 처리해 콘텐츠 확장에 유연하게 대응</li>
+      <li>포켓몬식 전투 UI와 타격 연출까지 구현해, 수치가 실제 플레이 감각으로 이어지는지 직접 확인</li>
+    </ul>
+    <div class="actions">
+      <a href="rpg-demo/">▶ 플레이 데모</a>
+      <a href="docs/rpg/system-design.md">시스템 기획서</a>
+      <a href="docs/rpg/RPG_밸런스기획서.xlsx">밸런스 시트(xlsx)</a>
+      <a href="docs/rpg/RPG_설계결정서.xlsx">설계 결정 로그(xlsx)</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>밸런스 수치 시각화 툴</h3>
+    <div class="meta">2026.09 · 독립 웹 도구 · Vanilla JS + Chart.js</div>
+    <div class="summary">
+      특정 게임에 종속되지 않고, 엑셀로 수치를 굳히기 전에 "감"을 먼저 잡아보기 위한 범용 도구입니다.
+      기준 스탯 → 대미지 공식 → 성장 곡선 → 가치 환율 → 경험치 곡선을 하나의 마법사로 잇고,
+      몬테카를로 시뮬레이션 · 가챠 천장 · 장비 파밍을 부록으로 분리했습니다.
+    </div>
+    <ul>
+      <li>패널 간 수치가 자동으로 이어지도록 설계하되, 어디까지 연동시키고 어디서 끊어야 설계 자유도가
+        남는지 직접 판단해서 구조를 잡음</li>
+      <li>전투를 자동으로 반복 시뮬레이션해 DPS·치명타·TTK를 실시간으로 보여주고, "승률이 같아도 분산이
+        다르면 체감이 다르다"는 걸 그래프로 직접 확인할 수 있게 구성</li>
+      <li>기능을 바꿀 때마다 jsdom으로 실제 DOM 동작을 자동 검증하며 개발</li>
+    </ul>
+    <div class="actions">
+      <a href="balance-tool/">▶ 도구 열어보기</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>붕괴: 스타레일 역기획서</h3>
+    <div class="meta">2026.09 · 상용 라이브 서비스 게임 역기획</div>
+    <div class="summary">
+      실제 서비스 중인 상용 게임의 전투 수치를 공식 위키·인게임 데이터로 역산해, 방어 공식·성장 곡선·
+      육성 비중·유물 옵션 가중치까지 정량적으로 분석하고 개선안을 제안했습니다.
+    </div>
+    <ul>
+      <li>DEF = 200 + 10×Lv 등 실제 공식을 데이터로 역산해서 검증하고, 곱셈형 방어 공식의 구조를 정리</li>
+      <li>레벨업 : 광추 : 유물 육성 비중을 <b>1 : 0.8 : 2</b>로 정량화</li>
+      <li>SPD 부옵션 가중치를 4→5로 올리는 개선안을 확률 계산으로 검증 — 체감 등장률 19.6%→23.7%,
+        목표 도달에 필요한 개수 5.1개→4.21개</li>
+    </ul>
+    <div class="actions">
+      <a href="docs/star-rail-reverse-engineering.md">역기획서 보기</a>
+    </div>
+  </div>
+
+  <h2 class="section">참고 — 게임 서버 개발 이력</h2>
+
+  <div class="card ref">
+    <h3>Project-Idle-Runtime — 방치형 게임 서버 개발</h3>
+    <div class="meta">서버 개발자로서 직접 제작 · C++ IOCP + Unity 클라이언트</div>
+    <div class="summary">
+      밸런스 기획으로 전환하기 전, 서버 개발자로서 직접 만든 방치형 게임입니다. 지금은 서버/클라이언트
+      구현 이력으로만 참고해 주세요 — 이 게임의 수치 체계를 직접 재설계하는 작업은 다음 단계로 준비 중입니다.
+    </div>
+    <div class="actions">
+      <a href="https://hellobot99.github.io">게임 서버 개발 포트폴리오에서 자세히 보기</a>
+      <a href="https://github.com/Hellobot99/idle-runtime-server">GitHub</a>
+    </div>
+  </div>
+
+  <footer>
+    지속적으로 업데이트되는 기록입니다. 최신 진행 상황은 위 링크에서 확인할 수 있습니다.
+  </footer>
+
+</div>
+</body>
+</html>

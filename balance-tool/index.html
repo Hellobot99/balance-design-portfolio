@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>밸런스 시각화 툴</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  :root {
+    --accent: #4f46e5; --accent-light: #eef2ff;
+    --synced-bg: #e0f2fe; --synced-border: #38bdf8;
+    --text: #1f2330; --text-soft: #64748b; --bg: #f1f3f8; --card: #fff; --border: #e2e5ec;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; max-width: 1560px; margin: 28px auto; padding: 0 18px; background: var(--bg); color: var(--text); line-height: 1.45; }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  h2 { font-size: 15px; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
+  h2 .badge { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 12px; font-weight: bold; flex-shrink: 0; }
+  p.desc { font-size: 12.5px; color: var(--text-soft); margin: 4px 0 14px; }
+  .top-desc { font-size: 13.5px; color: var(--text-soft); margin: 4px 0 20px; }
+  .legend { display: flex; gap: 16px; align-items: center; font-size: 12px; color: var(--text-soft); margin-bottom: 18px; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+  .legend .i-synced { background: var(--synced-bg); border: 1px solid var(--synced-border); }
+  .legend .i-new { background: #fff; border: 1px solid #cbd5e1; }
+
+  .panels-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 1100px) { .panels-grid { grid-template-columns: 1fr; } }
+  .panel { background: var(--card); border: 1px solid var(--border); border-top: 3px solid var(--accent); border-radius: 12px; padding: 18px 22px; box-shadow: 0 1px 4px rgba(20,20,50,0.05); min-width: 0; }
+  .panel.standalone { border-top-color: #cbd5e1; }
+  .row { display: flex; flex-wrap: wrap; gap: 18px; }
+  .controls { flex: 1; min-width: 240px; overflow-x: auto; }
+  .chart-wrap { flex: 2; min-width: 260px; }
+
+  label { display: block; font-size: 12px; margin: 11px 0 3px; color: #475569; font-weight: 500; }
+  label .val { font-weight: 700; color: var(--accent); }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+  input[type="number"], input[type="text"] { width: 70px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 5px; font-size: 12.5px; }
+  select { padding: 4px 6px; border: 1px solid var(--border); border-radius: 5px; font-size: 12.5px; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 12px; margin-top: 8px; }
+  table th { background: #f8fafc; padding: 6px; border: 1px solid var(--border); }
+  table td { border: 1px solid var(--border); padding: 4px 6px; text-align: center; }
+  table tbody tr:nth-child(even) { background: #fafbfd; }
+  table input:not([type="checkbox"]):not([type="radio"]) { width: 55px; border: 1px solid var(--border); border-radius: 4px; padding: 3px 4px; }
+  table input[type="checkbox"], table input[type="radio"] { width: 16px; height: 16px; cursor: pointer; }
+
+  /* 자동 연결(synced) 필드 표시 */
+  .synced-field { background: var(--synced-bg) !important; border: 1px solid var(--synced-border) !important; }
+  input[type="range"].synced-field { background: transparent !important; border: none !important; accent-color: var(--synced-border); }
+  @keyframes syncFlash { 0% { box-shadow: 0 0 0 0 rgba(56,189,248,0.9); } 100% { box-shadow: 0 0 0 8px rgba(56,189,248,0); } }
+  .sync-flash { animation: syncFlash 0.6s ease-out; }
+
+  .metric-box { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .metric { background: var(--accent-light); border-radius: 9px; padding: 9px 14px; font-size: 12px; color: #4338ca; min-width: 90px; }
+  .metric b { display: block; font-size: 19px; margin-top: 2px; color: #312e81; }
+
+  button { padding: 7px 14px; font-size: 12.5px; cursor: pointer; margin-top: 10px; border: 1px solid var(--accent); background: var(--accent); color: #fff; border-radius: 7px; font-weight: 600; transition: opacity 0.15s; }
+  button:hover { opacity: 0.85; }
+  #value-add-row, .preset-btn { background: #fff; color: var(--accent); }
+  .preset-btn { padding: 3px 10px; font-size: 11px; margin: 0; border-radius: 999px; }
+
+  .note { font-size: 11px; color: #94a3b8; margin-top: 8px; }
+  .preset-row { display: flex; gap: 6px; margin: 4px 0 8px; }
+
+  /* 탭 내비게이션 */
+  .tabs { display: flex; gap: 6px; margin-bottom: 18px; border-bottom: 2px solid var(--border); }
+  .tab-btn { background: none; border: none; color: var(--text-soft); font-weight: 700; font-size: 13.5px; padding: 10px 16px; margin: 0; border-radius: 0; border-bottom: 3px solid transparent; }
+  .tab-btn:hover { opacity: 1; color: var(--accent); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-btn.tab-btn-appendix { margin-left: auto; color: #94a3b8; }
+  .tab-content { animation: fadeIn 0.15s ease; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .tab-nav { display: flex; justify-content: space-between; margin-top: 20px; }
+  .btn-secondary { background: #fff; color: var(--text-soft); border: 1px solid var(--border); }
+
+  /* 3번 탭 결과 대시보드 */
+  .dash-grid { display: grid; grid-template-columns: 240px 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 800px) { .dash-grid { grid-template-columns: 1fr; } }
+  .dash-sidebar { position: sticky; top: 16px; }
+  .battle-visual { display: flex; align-items: center; justify-content: space-around; padding: 24px 10px; }
+  .fighter-box { padding: 18px 28px; border-radius: 12px; font-weight: 700; font-size: 14px; text-align: center; }
+  .fighter-player { background: var(--accent-light); color: var(--accent); border: 2px solid var(--accent); }
+  .fighter-monster { background: #fee2e2; color: #b91c1c; border: 2px solid #ef4444; }
+  .vs-label { font-weight: 700; color: #cbd5e1; font-size: 15px; }
+  .fighter-col { display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; }
+  .hit-indicator { position: absolute; top: -34px; left: 50%; font-size: 20px; font-weight: 800; color: #ef4444; opacity: 0; pointer-events: none; white-space: nowrap; }
+  .hit-indicator.show { animation: hitPop 0.7s ease forwards; }
+  @keyframes hitPop {
+    0% { opacity: 0; transform: translate(-50%, 8px) scale(0.8); }
+    15% { opacity: 1; transform: translate(-50%, -6px) scale(1.15); }
+    70% { opacity: 1; transform: translate(-50%, -10px) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -22px) scale(0.9); }
+  }
+  .hp-bar-bg { width: 160px; background: #e5e7eb; border-radius: 6px; height: 12px; overflow: hidden; margin-top: 4px; }
+  .hp-bar-fill { height: 100%; background: linear-gradient(90deg, #ef4444, #f87171); transition: width 0.3s ease; }
+  .formula-box { background: #f8fafc; }
+  @keyframes hitShake { 0%,100%{transform:translateX(0);} 20%{transform:translateX(-6px);} 40%{transform:translateX(6px);} 60%{transform:translateX(-4px);} 80%{transform:translateX(4px);} }
+</style>
+</head>
+<body>
+  <h1>밸런스 시각화 툴</h1>
+  <p class="top-desc">강의·책·역기획에서 배운 밸런스 공식들을 직접 조작해보는 범용 도구. 특정 게임 프로젝트에 종속되지 않은 일반 공식 기준. 패널 0→7 순서는 실제 설계 의존관계를 따른다 — 파란 칸은 앞 패널에서 자동으로 채워진 값, 흰 칸은 직접 정해야 하는 새 값이다.</p>
+  <div class="legend">
+    <span><i class="i-synced"></i>앞 패널에서 자동으로 이어진 값</span>
+    <span><i class="i-new"></i>직접 정하는 새 값</span>
+  </div>
+
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="tab-1">1. 전투 · 성장</button>
+  <button class="tab-btn" data-tab="tab-2">2. 경제</button>
+  <button class="tab-btn" data-tab="tab-3">3. 결과 시뮬레이션</button>
+  <button class="tab-btn tab-btn-appendix" data-tab="tab-appendix">부록</button>
+</div>
+
+<div class="tab-content" id="tab-1">
+  <div class="panels-grid">
+  <!-- 0. 기준 잡기 -->
+  <div class="panel">
+    <h2><span class="badge">0</span>기준 잡기 — 목표 처치 시간에서 필요 ATK 역산</h2>
+    <p class="desc">1번(대미지 공식) 패널은 ATK를 넣으면 TTK가 나오는 정방향 계산이다. 하지만 설계는 보통 반대 방향에서 시작한다 — "이 전투를 몇 초/몇 타 안에 끝내고 싶다"를 먼저 정하고 거기서 필요 ATK를 역산한다. 여기서 나온 ATK·DEF·K·HP는 1번 패널에 자동으로 반영되고, 그 ATK는 2→3→5번까지 자동으로 흘러간다(직접 정해야 하는 새 값만 각 패널에 남겨뒀다).</p>
+    <div class="row">
+      <div class="controls">
+        <label>목표 처치 시간(초) <input type="number" id="base-time" value="15" /></label>
+        <label>초당 타격 횟수 <input type="number" id="base-aps" value="1" step="0.1" /></label>
+        <label>적 DEF <input type="number" id="base-def" value="100" /></label>
+        <label>방어상수 K <input type="number" id="base-k" value="100" /></label>
+        <label>적 HP <input type="number" id="base-hp" value="1000" /></label>
+        <button id="base-run">역산</button>
+        <div class="metric-box">
+          <div class="metric">목표 타수<b id="base-out-hits">-</b></div>
+          <div class="metric">필요 대미지/타<b id="base-out-dmg">-</b></div>
+          <div class="metric">필요 ATK<b id="base-out-atk">-</b></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">공식: 목표 타수 = ceil(목표시간 × 초당타수), 필요 대미지/타 = 적HP ÷ 목표 타수, 필요 ATK = 필요 대미지 ÷ (1 − DEF/(DEF+K))</p>
+  </div>
+
+  <!-- 1. 대미지 / 방어 수확체감 -->
+  <div class="panel">
+    <h2><span class="badge">1</span>대미지 공식 · 방어력 수확체감</h2>
+    <p class="desc">방어율 = DEF/(DEF+K), 유효체력 = HP/(1−방어율), 대미지 = ATK×(1−방어율). ATK/DEF/K/HP는 0번에서 자동으로 채워진다(직접 슬라이더를 움직이면 그 값이 2번 이후로 다시 이어진다).</p>
+    <div class="row">
+      <div class="controls">
+        <label>ATK <span class="val" id="dmg-atk-v">100</span></label>
+        <input type="range" id="dmg-atk" min="1" max="1000" value="100" class="synced-field" />
+        <label>DEF <span class="val" id="dmg-def-v">100</span></label>
+        <input type="range" id="dmg-def" min="0" max="1000" value="100" class="synced-field" />
+        <label>방어상수 K <span class="val" id="dmg-k-v">100</span></label>
+        <input type="range" id="dmg-k" min="1" max="1000" value="100" class="synced-field" />
+        <label>적 HP <span class="val" id="dmg-hp-v">1000</span></label>
+        <input type="range" id="dmg-hp" min="1" max="10000" value="1000" class="synced-field" />
+        <div class="metric-box">
+          <div class="metric">방어율<b id="dmg-out-ratio">-</b></div>
+          <div class="metric">대미지/타<b id="dmg-out-dmg">-</b></div>
+          <div class="metric">TTK(턴)<b id="dmg-out-ttk">-</b></div>
+          <div class="metric">유효체력<b id="dmg-out-ehp">-</b></div>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="chart-defense"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 2. 성장 곡선 -->
+  <div class="panel">
+    <h2><span class="badge">2</span>성장 곡선 (레벨별 스탯)</h2>
+    <p class="desc">값 = Lv1값 + (LvMax값−Lv1값) × ((1−k)×t + k×t³), t=(레벨−1)/(최대레벨−1). 곡선 A의 LvMax는 1번의 ATK가 자동으로 채운다 — Lv1·k·최대레벨은 아직 안 정해진 새 값이라 직접 정한다.</p>
+    <div class="row">
+      <div class="controls">
+        <label>최대 레벨 <span class="val" id="gc-maxlv-v">30</span></label>
+        <input type="range" id="gc-maxlv" min="5" max="99" value="30" />
+
+        <b style="font-size:12px;">곡선 A</b>
+        <label>Lv1 값 <span class="val" id="gc-a-lv1-v">10</span></label>
+        <input type="range" id="gc-a-lv1" min="0" max="500" value="10" />
+        <label>LvMax 값 <span class="val" id="gc-a-lvmax-v">500</span></label>
+        <input type="range" id="gc-a-lvmax" min="0" max="3000" value="500" class="synced-field" />
+        <label>곡선계수 k <span class="val" id="gc-a-k-v">0</span></label>
+        <input type="range" id="gc-a-k" min="0" max="1" step="0.05" value="0" />
+
+        <label><input type="checkbox" id="gc-b-enable" /> 곡선 B와 비교</label>
+        <div id="gc-b-controls" style="display:none;">
+          <label>Lv1 값 <span class="val" id="gc-b-lv1-v">10</span></label>
+          <input type="range" id="gc-b-lv1" min="0" max="500" value="10" />
+          <label>LvMax 값 <span class="val" id="gc-b-lvmax-v">500</span></label>
+          <input type="range" id="gc-b-lvmax" min="0" max="3000" value="500" />
+          <label>곡선계수 k <span class="val" id="gc-b-k-v">0.6</span></label>
+          <input type="range" id="gc-b-k" min="0" max="1" step="0.05" value="0.6" />
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="chart-growth"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 3. 가치 환율 비교 -->
+  <div class="panel">
+    <h2><span class="badge">3</span>속성 가치 환율 비교</h2>
+    <p class="desc">가치점수 = ATK×1 + DEF×DEF가중치 + HP×HP가중치 + 힘×힘가중치 + 지력×지력가중치. 2번과는 연결을 끊어서 표의 값은 전부 직접 정하는 새 값이다. 다만 1행(빌드 A)의 ATK·DEF·HP는 5번 A로는 계속 이어진다.</p>
+    <table id="value-table">
+      <thead><tr><th>이름</th><th>ATK</th><th>DEF</th><th>HP</th><th>힘</th><th>지력</th></tr></thead>
+      <tbody>
+        <tr><td><input value="빌드 A" class="vname" /></td><td><input type="number" class="vatk" value="30" /></td><td><input type="number" class="vdef" value="10" /></td><td><input type="number" class="vhp" value="80" /></td><td><input type="number" class="vstr" value="0" /></td><td><input type="number" class="vint" value="0" /></td></tr>
+        <tr><td><input value="빌드 B" class="vname" /></td><td><input type="number" class="vatk" value="10" /></td><td><input type="number" class="vdef" value="50" /></td><td><input type="number" class="vhp" value="130" /></td><td><input type="number" class="vstr" value="10" /></td><td><input type="number" class="vint" value="0" /></td></tr>
+        <tr><td><input value="빌드 C" class="vname" /></td><td><input type="number" class="vatk" value="10" /></td><td><input type="number" class="vdef" value="30" /></td><td><input type="number" class="vhp" value="50" /></td><td><input type="number" class="vstr" value="0" /></td><td><input type="number" class="vint" value="20" /></td></tr>
+      </tbody>
+    </table>
+    <button id="value-add-row">+ 행 추가</button>
+    <div class="row" style="margin-top:12px;">
+      <div class="controls">
+        <label>DEF 가중치(1DEF=?ATK) <span class="val" id="w-def-v">3</span></label>
+        <input type="range" id="w-def" min="0" max="10" step="0.1" value="3" />
+        <label>HP 가중치(1HP=?ATK) <span class="val" id="w-hp-v">0.375</span></label>
+        <input type="range" id="w-hp" min="0" max="2" step="0.005" value="0.375" />
+        <label>힘 가중치(1힘=?ATK) <span class="val" id="w-str-v">9</span></label>
+        <input type="range" id="w-str" min="0" max="15" step="0.5" value="9" />
+        <label>지력 가중치(1지력=?ATK) <span class="val" id="w-int-v">9</span></label>
+        <input type="range" id="w-int" min="0" max="15" step="0.5" value="9" />
+      </div>
+      <div class="chart-wrap"><canvas id="chart-value"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 4. 경험치 곡선 -->
+  <div class="panel standalone">
+    <h2><span class="badge">4</span>경험치 곡선</h2>
+    <p class="desc">Lv1 누적 경험치는 0으로 고정. 성장 곡선과 같은 공식으로 누적치를 구하고, 구간별(직전 레벨 대비) 필요량도 같이 본다.</p>
+    <div class="row">
+      <div class="controls">
+        <label>최대 레벨 <span class="val" id="exp-maxlv-v">30</span></label>
+        <input type="range" id="exp-maxlv" min="5" max="99" value="30" />
+        <label>LvMax 목표 누적 경험치 <span class="val" id="exp-max-v">10000</span></label>
+        <input type="range" id="exp-max" min="100" max="100000" step="100" value="10000" />
+        <label>곡선계수 k <span class="val" id="exp-k-v">0.6</span></label>
+        <input type="range" id="exp-k" min="0" max="1" step="0.05" value="0.6" />
+      </div>
+      <div class="chart-wrap"><canvas id="chart-exp"></canvas></div>
+    </div>
+  </div>
+
+  </div>
+  <div class="tab-nav"><span></span><button id="btn-next-1">다음 → 경제</button></div>
+</div>
+
+<div class="tab-content" id="tab-2" style="display:none;">
+  <div class="panel standalone">
+    <h2><span class="badge">2</span>경제 (준비 중)</h2>
+    <p class="desc">책 4장(경제 수치)을 읽은 뒤 골드 획득·상점 가격·소비 밸런스를 여기서 다룬다. 지금은 비워둔다.</p>
+    <p class="note">채워질 예정: 몬스터 골드 드랍, 상점 아이템 가격, 회복 아이템 소비량과 조우율.</p>
+  </div>
+  <div class="tab-nav"><button id="btn-prev-2" class="btn-secondary">← 이전</button><button id="btn-next-2">다음 → 결과 시뮬레이션</button></div>
+</div>
+
+<div class="tab-content" id="tab-3" style="display:none;">
+  <p class="desc">1번 탭에서 정한 ATK·DEF·방어상수·HP를 그대로 가져와서 보여준다. 왼쪽 바를 움직이면 즉시 재계산된다(1번 탭 값과는 별개로, 여기서 마지막으로 미세 조정해보는 용도).</p>
+  <div class="dash-grid">
+    <div class="panel dash-sidebar">
+      <h2><span class="badge">3</span>수치 조절</h2>
+      <label>플레이어 ATK <span class="val" id="final-atk-v">100</span></label>
+      <input type="range" id="final-atk" min="1" max="20000" value="100" />
+      <label>몬스터 DEF <span class="val" id="final-def-v">100</span></label>
+      <input type="range" id="final-def" min="0" max="5000" value="100" />
+      <label>방어상수 K <span class="val" id="final-k-v">100</span></label>
+      <input type="range" id="final-k" min="1" max="2000" value="100" />
+      <label>몬스터 HP <span class="val" id="final-hp-v">1000</span></label>
+      <input type="range" id="final-hp" min="1" max="200000" value="1000" />
+      <label>초당 공격 횟수(APS) <span class="val" id="final-aps-v">1</span></label>
+      <input type="range" id="final-aps" min="0.1" max="5" step="0.1" value="1" />
+      <label>치명타 확률(%) <span class="val" id="final-crit-rate-v">15</span></label>
+      <input type="range" id="final-crit-rate" min="0" max="100" value="15" />
+      <label>치명타 추가 피해(%) <span class="val" id="final-crit-dmg-v">50</span></label>
+      <input type="range" id="final-crit-dmg" min="0" max="300" value="50" />
+      <button id="final-pull" class="btn-secondary" style="width:100%;">1번 탭 값 다시 가져오기</button>
+    </div>
+    <div class="dash-main">
+      <div class="metric-box">
+        <div class="metric">평타 데미지<b id="final-out-dmg">-</b></div>
+        <div class="metric">기대 평타 데미지<b id="final-out-edmg">-</b></div>
+        <div class="metric">방어율<b id="final-out-ratio">-</b></div>
+        <div class="metric">유효체력<b id="final-out-ehp">-</b></div>
+        <div class="metric">예상 TTK(타 / 초)<b id="final-out-ttk">-</b></div>
+      </div>
+
+      <div class="panel" style="margin-top:16px;">
+        <h2>실시간 전투 시뮬레이션</h2>
+        <div class="battle-visual">
+          <div class="fighter-box fighter-player">플레이어</div>
+          <div class="vs-label">VS</div>
+          <div class="fighter-col">
+            <div class="hit-indicator" id="final-hit-indicator"></div>
+            <div class="fighter-box fighter-monster">몬스터</div>
+            <div class="hp-bar-bg"><div class="hp-bar-fill" id="final-hp-fill" style="width:100%;"></div></div>
+            <div class="note" id="final-hp-text">1000 / 1000</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:6px; align-items:center;">
+          <button id="final-reset" class="btn-secondary">체력 초기화 (자동공격 재시작)</button>
+          <span class="note" id="final-auto-status">자동 공격 중...</span>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:16px;">
+        <h2>레벨별 필요 경험치 (1번 탭 4번 패널 설정 기준)</h2>
+        <canvas id="chart-exp-final"></canvas>
+      </div>
+
+      <div class="panel formula-box" style="margin-top:16px;">
+        <h2 style="font-size:13px;">적용 수식</h2>
+        <div class="note">방어율 = DEF / (DEF + K)</div>
+        <div class="note">평타 데미지 = ATK × (1 − 방어율)</div>
+        <div class="note">유효체력 = HP / (1 − 방어율)</div>
+        <div class="note">TTK = ceil(HP ÷ 평타 데미지)</div>
+      </div>
+    </div>
+  </div>
+  <div class="tab-nav"><button id="btn-prev-3" class="btn-secondary">← 이전</button><span></span></div>
+</div>
+
+<div class="tab-content" id="tab-appendix" style="display:none;">
+  <p class="desc">아래는 메인 흐름(1→2→3)과 독립적인 보조 도구다.</p>
+  <div class="panels-grid">
+  <!-- 5. 몬테카를로 1v1 -->
+  <div class="panel">
+    <h2><span class="badge">5</span>몬테카를로 1v1 승률 시뮬레이션</h2>
+    <p class="desc">속도가 높은 쪽이 먼저 행동하는 1대1 맞대결을 N번 반복해서 승률과 소요 턴 분포를 본다. A의 ATK/DEF/HP는 3번 1행(빌드 A)이 자동으로 채운다 — 속도·치명타·B 전체는 새로 정하는 값이다.</p>
+    <p class="desc"><b>핵심 통찰</b>: 승률이 똑같이 50%여도 "항상 2턴에 끝나는 매치업"과 "매번 턴수가 들쭉날쭉한 매치업"은 플레이어에게 완전히 다르게 느껴진다. 그래서 승률뿐 아니라 <b>턴수의 분산(표준편차)</b>도 같이 봐야 한다. (참고: <a href="https://github.com/ZakriaYounus/game_balance_simulator" target="_blank">game_balance_simulator</a>)</p>
+    <div class="row">
+      <div class="controls">
+        <b style="font-size:12px;">A</b>
+        <div class="preset-row">
+          <button class="preset-btn" data-side="a" data-preset="tank">탱커</button>
+          <button class="preset-btn" data-side="a" data-preset="assassin">암살자</button>
+          <button class="preset-btn" data-side="a" data-preset="mage">마법사</button>
+        </div>
+        <label>ATK <input type="number" id="mc-a-atk" value="100" class="synced-field" /></label>
+        <label>DEF <input type="number" id="mc-a-def" value="80" class="synced-field" /></label>
+        <label>HP <input type="number" id="mc-a-hp" value="1000" class="synced-field" /></label>
+        <label>속도 <input type="number" id="mc-a-spd" value="100" /></label>
+        <label>치명타 확률(%) <input type="number" id="mc-a-crit" value="15" /></label>
+        <b style="font-size:12px;">B</b>
+        <div class="preset-row">
+          <button class="preset-btn" data-side="b" data-preset="tank">탱커</button>
+          <button class="preset-btn" data-side="b" data-preset="assassin">암살자</button>
+          <button class="preset-btn" data-side="b" data-preset="mage">마법사</button>
+        </div>
+        <label>ATK <input type="number" id="mc-b-atk" value="90" /></label>
+        <label>DEF <input type="number" id="mc-b-def" value="100" /></label>
+        <label>HP <input type="number" id="mc-b-hp" value="1100" /></label>
+        <label>속도 <input type="number" id="mc-b-spd" value="90" /></label>
+        <label>치명타 확률(%) <input type="number" id="mc-b-crit" value="15" /></label>
+        <label>방어상수 K <input type="number" id="mc-k" value="100" /></label>
+        <label>시행 횟수 <input type="number" id="mc-n" value="2000" /></label>
+        <button id="mc-run">시뮬레이션 실행</button>
+        <div class="metric-box">
+          <div class="metric">A 승률<b id="mc-out-winrate">-</b></div>
+          <div class="metric">평균 턴수<b id="mc-out-avgturn">-</b></div>
+          <div class="metric">턴수 표준편차<b id="mc-out-stdturn">-</b></div>
+          <div class="metric">최소~최대 턴수<b id="mc-out-minmax">-</b></div>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="chart-mc"></canvas></div>
+    </div>
+
+    <h2 style="margin-top:22px; font-size:13px; color:#64748b;">5-1. 민감도 분석 — A의 스탯 하나를 바꿔가면서 승률이 어떻게 변하는지</h2>
+    <p class="desc">위 A/B 기준값은 그대로 두고, A의 스탯 하나만 범위 내에서 바꿔가며 각 지점마다 승률을 다시 계산한다.</p>
+    <div class="row">
+      <div class="controls">
+        <label>바꿀 스탯
+          <select id="sens-stat">
+            <option value="atk">ATK</option>
+            <option value="def">DEF</option>
+            <option value="hp">HP</option>
+            <option value="spd">속도</option>
+          </select>
+        </label>
+        <label>최소값 <input type="number" id="sens-min" value="50" /></label>
+        <label>최대값 <input type="number" id="sens-max" value="200" /></label>
+        <label>지점 수 <input type="number" id="sens-steps" value="10" /></label>
+        <label>지점당 시행 횟수 <input type="number" id="sens-n" value="500" /></label>
+        <button id="sens-run">민감도 분석 실행</button>
+      </div>
+      <div class="chart-wrap"><canvas id="chart-sens"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 6. 가챠 확률 설계 (천장 시스템) -->
+  <div class="panel standalone">
+    <h2><span class="badge">6</span>가챠 확률 설계 — 천장(피티) 시스템</h2>
+    <p class="desc">기본 확률로 가다가 소프트 피티 구간부터 확률이 점점 올라가고, 하드 피티에 도달하면 100% 확정. 붕스 역기획서에서 다룬 "유물 파밍 확률" 작업과 같은 문제(평균은 유지하면서 분산만 줄이기)를 가챠 뽑기에 적용한 것.</p>
+    <div class="row">
+      <div class="controls">
+        <label>기본 확률(%) <span class="val" id="gacha-base-v">0.6</span></label>
+        <input type="range" id="gacha-base" min="0.1" max="10" step="0.1" value="0.6" />
+        <label>소프트 피티 시작(몇 회부터 확률 상승) <span class="val" id="gacha-soft-v">74</span></label>
+        <input type="range" id="gacha-soft" min="1" max="150" value="74" />
+        <label>하드 피티(몇 회째 100% 확정) <span class="val" id="gacha-hard-v">90</span></label>
+        <input type="range" id="gacha-hard" min="2" max="200" value="90" />
+        <label>시뮬레이션 유저 수 <span class="val" id="gacha-n-v">3000</span></label>
+        <input type="range" id="gacha-n" min="100" max="20000" step="100" value="3000" />
+        <div class="metric-box">
+          <div class="metric">평균 뽑기 횟수<b id="gacha-out-avg">-</b></div>
+          <div class="metric">표준편차<b id="gacha-out-std">-</b></div>
+          <div class="metric">50회 내 획득 확률<b id="gacha-out-p50">-</b></div>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart-gacha-cum" style="margin-bottom:14px;"></canvas>
+        <canvas id="chart-gacha-hist"></canvas>
+      </div>
+    </div>
+    <p class="note">위 그래프: (1) 뽑기 횟수별 누적 획득 확률 곡선 — 결정론적 계산. (2) 실제 유저들의 "첫 획득까지 걸린 횟수" 분포 — 몬테카를로 시뮬레이션. 평균이 같아도 이 분포의 폭(표준편차)이 좁을수록 유저가 느끼는 불쾌감(운 나쁜 유저)이 줄어든다.</p>
+  </div>
+
+  <!-- 7. 장비 파밍 확률 (비복원 가중추첨) -->
+  <div class="panel standalone">
+    <h2><span class="badge">7</span>장비 파밍 확률 — 가중치 기반 부옵션 뽑기 (비복원 추첨)</h2>
+    <p class="desc">부옵션 풀에서 가중치 비례로 중복 없이 n줄을 뽑을 때 원하는 부옵션이 나올 확률. 붕스 역기획서에서 "유물 부옵션에 속도가 뜰 확률"을 계산했던 것을 일반화했다(기본값은 그때 쓴 실제 가중치). 목표 부옵션의 가중치를 바꿔보면서 "가중치를 얼마나 올려야 파밍이 얼마나 쉬워지는지" 확인할 수 있다.</p>
+    <div class="row">
+      <div class="controls" style="flex:1.4;">
+        <table id="farm-table">
+          <thead><tr><th>부옵션</th><th>가중치</th><th>제외<br/>(주옵션 겹침)</th><th>목표</th></tr></thead>
+          <tbody>
+            <tr><td><input class="fname" value="HP" /></td><td><input type="number" class="fweight" value="10" /></td><td><input type="checkbox" class="fexclude" /></td><td><input type="radio" name="ftarget" class="ftarget" /></td></tr>
+            <tr><td><input class="fname" value="ATK" /></td><td><input type="number" class="fweight" value="10" /></td><td><input type="checkbox" class="fexclude" /></td><td><input type="radio" name="ftarget" class="ftarget" /></td></tr>
+            <tr><td><input class="fname" value="DEF" /></td><td><input type="number" class="fweight" value="10" /></td><td><input type="checkbox" class="fexclude" /></td><td><input type="radio" name="ftarget" class="ftarget" /></td></tr>
+            <tr><td><input class="fname" value="HP%" /></td><td><input type="number" class="fweight" value="10" /></td><td><input type="checkbox" class="fexclude" /></td><td><input type="radio" name="ftarget" class="ftarget" /></td></tr>
+            <tr><td><input class="fname" value="ATK%" /></td><td><input type="number" class="fweight" value="10" /></td><td><input type="checkbox" class="fexclude" /></td><td><input type="radio" name="ftarget" class="ftarget" /></td></tr>
+            <tr><td><input class="fname" value="DEF%" /></td><td><input type="number" class="fweight" value="10" /></td><td><input type="checkbox" class="fexclude" /></td><td><input type="radio" name="ftarget" class="ftarget" /></td></tr>
+            <tr><td><input class="fname" value="속도(SPD)" /></td><td><input type="number" class="fweight" value="4" /></td><td><input type="checkbox" class="fexclude" /></td><td><input type="radio" name="ftarget" class="ftarget" checked /></td></tr>
+            <tr><td><input class="fname" value="크리티컬확률" /></td><td><input type="number" class="fweight" value="6" /></td><td><input type="checkbox" class="fexclude" /></td><td><input type="radio" name="ftarget" class="ftarget" /></td></tr>
+            <tr><td><input class="fname" value="크리티컬피해" /></td><td><input type="number" class="fweight" value="6" /></td><td><input type="checkbox" class="fexclude" /></td><td><input type="radio" name="ftarget" class="ftarget" /></td></tr>
+            <tr><td><input class="fname" value="효과적중" /></td><td><input type="number" class="fweight" value="8" /></td><td><input type="checkbox" class="fexclude" /></td><td><input type="radio" name="ftarget" class="ftarget" /></td></tr>
+            <tr><td><input class="fname" value="효과저항" /></td><td><input type="number" class="fweight" value="8" /></td><td><input type="checkbox" class="fexclude" /></td><td><input type="radio" name="ftarget" class="ftarget" /></td></tr>
+            <tr><td><input class="fname" value="격파효과" /></td><td><input type="number" class="fweight" value="8" /></td><td><input type="checkbox" class="fexclude" /></td><td><input type="radio" name="ftarget" class="ftarget" /></td></tr>
+          </tbody>
+        </table>
+        <label>뽑을 부옵션 줄 수 <input type="number" id="farm-lines" value="4" /></label>
+        <label>부옵션이 있는 장비 슬롯 개수 <input type="number" id="farm-slots" value="4" /></label>
+        <button id="farm-run">계산</button>
+        <div class="metric-box">
+          <div class="metric">장비 1개당 목표 확률<b id="farm-out-p">-</b></div>
+          <div class="metric">평균 필요 장비 개수<b id="farm-out-avg">-</b></div>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="chart-farm"></canvas></div>
+    </div>
+    <p class="note">아래 그래프: 장비 세트 안에서 목표 부옵션이 몇 줄이나 나오는지의 분포(이항분포 가정 — 슬롯마다 확률이 같다고 단순화).</p>
+  </div>
+
+  </div>
+</div>
+
+
+<script>
+// ===== 공통 =====
+function curveValue(lv1, lvmax, k, level, maxLevel) {
+  const t = (level - 1) / (maxLevel - 1);
+  return lv1 + (lvmax - lv1) * ((1 - k) * t + k * Math.pow(t, 3));
+}
+function bindRange(id, fmt) {
+  const el = document.getElementById(id);
+  const out = document.getElementById(id + "-v");
+  const update = () => { out.textContent = fmt ? fmt(+el.value) : el.value; };
+  el.addEventListener("input", update);
+  update();
+  return el;
+}
+
+function setVal(id, v) {
+  const el = document.getElementById(id);
+  el.value = v;
+  const out = document.getElementById(id + "-v");
+  if (out) out.textContent = v;
+  flash(el);
+}
+// 값이 자동으로 흘러 들어온 칸을 잠깐 반짝여서 어디서 왔는지 보여준다
+function flash(el) {
+  if (!el) return;
+  el.classList.remove("sync-flash");
+  void el.offsetWidth; // 리플로우 강제 (같은 애니메이션 재실행 위해)
+  el.classList.add("sync-flash");
+  setTimeout(() => el.classList.remove("sync-flash"), 650);
+}
+
+// ===== 0. 기준 잡기 → 자동 연결 체인 (0 → 1 → 2 → 3행1 → 5의 A) =====
+function computeBase() {
+  const time = +document.getElementById("base-time").value;
+  const aps = +document.getElementById("base-aps").value;
+  const def = +document.getElementById("base-def").value;
+  const K = +document.getElementById("base-k").value;
+  const hp = +document.getElementById("base-hp").value;
+  const hits = Math.max(1, Math.ceil(time * aps));
+  const dmgPerHit = hp / hits;
+  const ratio = def / (def + K);
+  const atk = Math.round(dmgPerHit / (1 - ratio));
+  document.getElementById("base-out-hits").textContent = hits;
+  document.getElementById("base-out-dmg").textContent = Math.round(dmgPerHit);
+  document.getElementById("base-out-atk").textContent = atk;
+  return { atk, def, K, hp };
+}
+function syncFromBase() {
+  const { atk, def, K, hp } = computeBase();
+  setVal("dmg-atk", atk); setVal("dmg-def", def); setVal("dmg-k", K); setVal("dmg-hp", hp);
+  renderDefense();
+  syncAtkToGrowth();
+}
+function syncAtkToGrowth() {
+  setVal("gc-a-lvmax", document.getElementById("dmg-atk").value);
+  renderGrowth();
+  // 2→3 연결은 끊음: 3번은 2번 값을 자동으로 안 받는다
+}
+function syncRow0ToMC() {
+  const row0 = document.querySelector("#value-table tbody tr:first-child");
+  if (!row0) return;
+  setVal("mc-a-atk", row0.querySelector(".vatk").value);
+  setVal("mc-a-def", row0.querySelector(".vdef").value);
+  setVal("mc-a-hp", row0.querySelector(".vhp").value);
+}
+["base-time", "base-aps", "base-def", "base-k", "base-hp"].forEach((id) => {
+  document.getElementById(id).addEventListener("input", syncFromBase);
+});
+document.getElementById("base-run").addEventListener("click", syncFromBase);
+
+// ===== 1. 성장 곡선 =====
+let chartGrowth;
+function renderGrowth() {
+  const maxLv = +document.getElementById("gc-maxlv").value;
+  const aLv1 = +document.getElementById("gc-a-lv1").value;
+  const aLvMax = +document.getElementById("gc-a-lvmax").value;
+  const aK = +document.getElementById("gc-a-k").value;
+  const labels = Array.from({ length: maxLv }, (_, i) => i + 1);
+  const dataA = labels.map((lv) => curveValue(aLv1, aLvMax, aK, lv, maxLv));
+  const datasets = [{ label: "곡선 A", data: dataA, borderColor: "#3b82f6", backgroundColor: "transparent", tension: 0.2 }];
+  if (document.getElementById("gc-b-enable").checked) {
+    const bLv1 = +document.getElementById("gc-b-lv1").value;
+    const bLvMax = +document.getElementById("gc-b-lvmax").value;
+    const bK = +document.getElementById("gc-b-k").value;
+    const dataB = labels.map((lv) => curveValue(bLv1, bLvMax, bK, lv, maxLv));
+    datasets.push({ label: "곡선 B", data: dataB, borderColor: "#ef4444", backgroundColor: "transparent", tension: 0.2 });
+  }
+  if (chartGrowth) chartGrowth.destroy();
+  chartGrowth = new Chart(document.getElementById("chart-growth"), {
+    type: "line", data: { labels, datasets }, options: { animation: false, scales: { y: { beginAtZero: true } } },
+  });
+}
+["gc-maxlv", "gc-a-lv1", "gc-a-lvmax", "gc-a-k", "gc-b-lv1", "gc-b-lvmax", "gc-b-k"].forEach((id) => bindRange(id));
+document.getElementById("gc-b-enable").addEventListener("change", (e) => {
+  document.getElementById("gc-b-controls").style.display = e.target.checked ? "block" : "none";
+  renderGrowth();
+});
+["gc-maxlv", "gc-a-lv1", "gc-a-lvmax", "gc-a-k", "gc-b-lv1", "gc-b-lvmax", "gc-b-k"].forEach((id) =>
+  document.getElementById(id).addEventListener("input", renderGrowth)
+);
+
+// ===== 2. 대미지 / 방어 수확체감 =====
+let chartDefense;
+function renderDefense() {
+  const atk = +document.getElementById("dmg-atk").value;
+  const def = +document.getElementById("dmg-def").value;
+  const K = +document.getElementById("dmg-k").value;
+  const hp = +document.getElementById("dmg-hp").value;
+  const ratio = def / (def + K);
+  const dmg = Math.max(0, Math.round(atk * (1 - ratio)));
+  const ttk = dmg > 0 ? Math.ceil(hp / dmg) : "∞";
+  const ehp = Math.round(hp / (1 - ratio));
+  document.getElementById("dmg-out-ratio").textContent = (ratio * 100).toFixed(1) + "%";
+  document.getElementById("dmg-out-dmg").textContent = dmg;
+  document.getElementById("dmg-out-ttk").textContent = ttk;
+  document.getElementById("dmg-out-ehp").textContent = ehp;
+
+  const maxDef = 1000;
+  const step = 20;
+  const labels = [];
+  const ehpCurve = [];
+  for (let d = 0; d <= maxDef; d += step) {
+    labels.push(d);
+    ehpCurve.push(Math.round(hp / (1 - d / (d + K))));
+  }
+  if (chartDefense) chartDefense.destroy();
+  chartDefense = new Chart(document.getElementById("chart-defense"), {
+    type: "line",
+    data: { labels, datasets: [
+      { label: "유효체력 (HP 고정, DEF만 변화)", data: ehpCurve, borderColor: "#10b981", backgroundColor: "transparent", pointRadius: 0, tension: 0.15 },
+    ] },
+    options: { animation: false, scales: { x: { title: { display: true, text: "DEF" } }, y: { title: { display: true, text: "유효체력" } } },
+      plugins: { annotation: {} } },
+  });
+}
+["dmg-atk", "dmg-def", "dmg-k", "dmg-hp"].forEach((id) => {
+  bindRange(id);
+  document.getElementById(id).addEventListener("input", renderDefense);
+});
+document.getElementById("dmg-atk").addEventListener("input", syncAtkToGrowth); // 직접 드래그해도 아래로 이어짐
+
+// ===== 3. 가치 환율 비교 =====
+let chartValue;
+function renderValue() {
+  const rows = document.querySelectorAll("#value-table tbody tr");
+  const wDef = +document.getElementById("w-def").value;
+  const wHp = +document.getElementById("w-hp").value;
+  const wStr = +document.getElementById("w-str").value;
+  const wInt = +document.getElementById("w-int").value;
+  const labels = [], scores = [];
+  rows.forEach((tr) => {
+    const name = tr.querySelector(".vname").value || "이름없음";
+    const atk = +tr.querySelector(".vatk").value || 0;
+    const def = +tr.querySelector(".vdef").value || 0;
+    const hp = +tr.querySelector(".vhp").value || 0;
+    const str = +tr.querySelector(".vstr").value || 0;
+    const intel = +tr.querySelector(".vint").value || 0;
+    const score = atk * 1 + def * wDef + hp * wHp + str * wStr + intel * wInt;
+    labels.push(name); scores.push(Math.round(score * 10) / 10);
+  });
+  if (chartValue) chartValue.destroy();
+  chartValue = new Chart(document.getElementById("chart-value"), {
+    type: "bar",
+    data: { labels, datasets: [{ label: "가치 점수", data: scores, backgroundColor: "#8b5cf6" }] },
+    options: { animation: false, scales: { y: { beginAtZero: true } } },
+  });
+}
+document.getElementById("value-add-row").addEventListener("click", () => {
+  const tbody = document.querySelector("#value-table tbody");
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td><input value="새 빌드" class="vname" /></td><td><input type="number" class="vatk" value="0" /></td><td><input type="number" class="vdef" value="0" /></td><td><input type="number" class="vhp" value="0" /></td><td><input type="number" class="vstr" value="0" /></td><td><input type="number" class="vint" value="0" /></td>`;
+  tbody.appendChild(tr);
+  tr.querySelectorAll("input").forEach((inp) => inp.addEventListener("input", renderValue));
+  renderValue();
+});
+document.querySelectorAll("#value-table input").forEach((inp) => inp.addEventListener("input", renderValue));
+["vatk", "vdef", "vhp"].forEach((cls) => {
+  const el = document.querySelector(`#value-table tbody tr:first-child .${cls}`);
+  if (el) el.addEventListener("input", syncRow0ToMC); // 1행(빌드 A)을 직접 고쳐도 5번 A로 이어짐
+});
+["w-def", "w-hp", "w-str", "w-int"].forEach((id) => {
+  bindRange(id);
+  document.getElementById(id).addEventListener("input", renderValue);
+});
+
+// ===== 4. 경험치 곡선 =====
+let chartExp;
+function renderExp() {
+  const maxLv = +document.getElementById("exp-maxlv").value;
+  const expMax = +document.getElementById("exp-max").value;
+  const k = +document.getElementById("exp-k").value;
+  const labels = Array.from({ length: maxLv }, (_, i) => i + 1);
+  const cumulative = labels.map((lv) => Math.round(curveValue(0, expMax, k, lv, maxLv)));
+  const perLevel = cumulative.map((v, i) => (i === 0 ? 0 : v - cumulative[i - 1]));
+  if (chartExp) chartExp.destroy();
+  chartExp = new Chart(document.getElementById("chart-exp"), {
+    data: { labels, datasets: [
+      { type: "line", label: "누적 경험치", data: cumulative, borderColor: "#f59e0b", backgroundColor: "transparent", yAxisID: "y", tension: 0.2 },
+      { type: "bar", label: "구간별 필요량", data: perLevel, backgroundColor: "rgba(59,130,246,0.4)", yAxisID: "y1" },
+    ] },
+    options: { animation: false, scales: {
+      y: { position: "left", title: { display: true, text: "누적 경험치" } },
+      y1: { position: "right", grid: { drawOnChartArea: false }, title: { display: true, text: "구간별 필요량" } },
+    } },
+  });
+}
+["exp-maxlv", "exp-max", "exp-k"].forEach((id) => {
+  bindRange(id);
+  document.getElementById(id).addEventListener("input", renderExp);
+});
+
+// ===== 5. 몬테카를로 1v1 =====
+let chartMc;
+function simulateOne(a, b, K) {
+  let hpA = a.hp, hpB = b.hp, turns = 0;
+  let turnA = a.spd >= b.spd; // 속도 높은 쪽 선공, 같으면 A 선공
+  while (hpA > 0 && hpB > 0 && turns < 200) {
+    turns++;
+    if (turnA) {
+      const crit = Math.random() * 100 < a.crit;
+      const dmg = Math.max(0, Math.round(a.atk * (1 - b.def / (b.def + K)) * (crit ? 2 : 1)));
+      hpB -= dmg;
+    } else {
+      const crit = Math.random() * 100 < b.crit;
+      const dmg = Math.max(0, Math.round(b.atk * (1 - a.def / (a.def + K)) * (crit ? 2 : 1)));
+      hpA -= dmg;
+    }
+    turnA = !turnA;
+  }
+  return { winner: hpA > 0 && hpB <= 0 ? "A" : hpB > 0 && hpA <= 0 ? "B" : "무승부", turns };
+}
+// N회 시뮬레이션을 돌려 통계를 반환 (버튼 핸들러와 민감도 분석에서 공용으로 사용)
+function runMonteCarlo(a, b, K, N) {
+  let winsA = 0;
+  const turns = [];
+  for (let i = 0; i < N; i++) {
+    const r = simulateOne(a, b, K);
+    if (r.winner === "A") winsA++;
+    turns.push(r.turns);
+  }
+  const avg = turns.reduce((s, t) => s + t, 0) / N;
+  const variance = turns.reduce((s, t) => s + (t - avg) ** 2, 0) / N;
+  return { winRate: winsA / N, avgTurns: avg, stdTurns: Math.sqrt(variance), minTurns: Math.min(...turns), maxTurns: Math.max(...turns), turns };
+}
+
+function readSide(side) {
+  return { atk: +mc(side + "-atk"), def: +mc(side + "-def"), hp: +mc(side + "-hp"), spd: +mc(side + "-spd"), crit: +mc(side + "-crit") };
+}
+
+document.getElementById("mc-run").addEventListener("click", () => {
+  const a = readSide("a");
+  const b = readSide("b");
+  const K = +mc("k");
+  const N = Math.min(20000, +mc("n"));
+  const stats = runMonteCarlo(a, b, K, N);
+
+  document.getElementById("mc-out-winrate").textContent = (stats.winRate * 100).toFixed(1) + "%";
+  document.getElementById("mc-out-avgturn").textContent = stats.avgTurns.toFixed(1);
+  document.getElementById("mc-out-stdturn").textContent = "±" + stats.stdTurns.toFixed(1);
+  document.getElementById("mc-out-minmax").textContent = `${stats.minTurns} ~ ${stats.maxTurns}`;
+
+  const turnBuckets = {};
+  stats.turns.forEach((t) => { const b2 = Math.min(20, t); turnBuckets[b2] = (turnBuckets[b2] || 0) + 1; });
+  const labels = Object.keys(turnBuckets).map(Number).sort((x, y) => x - y);
+  const data = labels.map((l) => turnBuckets[l]);
+  if (chartMc) chartMc.destroy();
+  chartMc = new Chart(document.getElementById("chart-mc"), {
+    type: "bar",
+    data: { labels: labels.map((l) => (l === 20 ? "20+" : String(l))), datasets: [{ label: "판수", data, backgroundColor: "#06b6d4" }] },
+    options: { animation: false, scales: { x: { title: { display: true, text: "종료 턴수" } }, y: { title: { display: true, text: "판수" } } } },
+  });
+});
+function mc(id) { return document.getElementById("mc-" + id).value; }
+
+// 스탯 프리셋 (탱커/암살자/마법사 — RPG 프로젝트의 3역할과 비슷한 개념을 범용으로 재구성)
+const STAT_PRESETS = {
+  tank:     { atk: 60,  def: 150, hp: 1600, spd: 70,  crit: 5  },
+  assassin: { atk: 140, def: 40,  hp: 700,  spd: 130, crit: 30 },
+  mage:     { atk: 110, def: 60,  hp: 850,  spd: 90,  crit: 15 },
+};
+document.querySelectorAll(".preset-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const side = btn.dataset.side, preset = STAT_PRESETS[btn.dataset.preset];
+    for (const [k, v] of Object.entries(preset)) document.getElementById(`mc-${side}-${k}`).value = v;
+  });
+});
+
+// 5-1. 민감도 분석: A의 스탯 하나를 범위 내에서 바꿔가며 승률 재계산
+let chartSens;
+document.getElementById("sens-run").addEventListener("click", () => {
+  const statKey = document.getElementById("sens-stat").value;
+  const min = +document.getElementById("sens-min").value;
+  const max = +document.getElementById("sens-max").value;
+  const steps = Math.max(2, +document.getElementById("sens-steps").value);
+  const nPerPoint = Math.min(5000, +document.getElementById("sens-n").value);
+  const b = readSide("b");
+  const K = +mc("k");
+  const labels = [], winRates = [];
+  for (let i = 0; i < steps; i++) {
+    const val = min + ((max - min) * i) / (steps - 1);
+    const a = readSide("a");
+    a[statKey] = val;
+    const stats = runMonteCarlo(a, b, K, nPerPoint);
+    labels.push(Math.round(val * 10) / 10);
+    winRates.push(Math.round(stats.winRate * 1000) / 10);
+  }
+  if (chartSens) chartSens.destroy();
+  chartSens = new Chart(document.getElementById("chart-sens"), {
+    type: "line",
+    data: { labels, datasets: [{ label: `A ${statKey} 값에 따른 A 승률(%)`, data: winRates, borderColor: "#e11d48", backgroundColor: "transparent", tension: 0.2 }] },
+    options: { animation: false, scales: { y: { title: { display: true, text: "A 승률(%)" }, min: 0, max: 100 }, x: { title: { display: true, text: `A ${statKey}` } } } },
+  });
+});
+
+// ===== 6. 가챠 확률 설계 (천장 시스템) =====
+function pityProb(i, basePct, soft, hard) {
+  const p0 = basePct / 100;
+  if (i >= hard) return 1;
+  if (i < soft) return p0;
+  return p0 + (1 - p0) * (i - soft) / (hard - soft);
+}
+let chartGachaCum, chartGachaHist;
+function renderGacha() {
+  const base = +document.getElementById("gacha-base").value;
+  const soft = +document.getElementById("gacha-soft").value;
+  const hard = +document.getElementById("gacha-hard").value;
+  const N = +document.getElementById("gacha-n").value;
+
+  // (1) 결정론적 누적 확률 곡선
+  const probs = [];
+  let survive = 1;
+  const cum = [];
+  for (let i = 1; i <= hard; i++) {
+    const p = pityProb(i, base, soft, hard);
+    probs.push(p);
+    survive *= (1 - p);
+    cum.push(1 - survive);
+  }
+  if (chartGachaCum) chartGachaCum.destroy();
+  chartGachaCum = new Chart(document.getElementById("chart-gacha-cum"), {
+    type: "line",
+    data: { labels: Array.from({ length: hard }, (_, i) => i + 1), datasets: [{ label: "누적 획득 확률", data: cum.map((v) => Math.round(v * 1000) / 10), borderColor: "#f97316", backgroundColor: "transparent", pointRadius: 0, tension: 0.1 }] },
+    options: { animation: false, scales: { y: { title: { display: true, text: "누적 확률(%)" }, min: 0, max: 100 }, x: { title: { display: true, text: "뽑기 횟수" } } } },
+  });
+
+  // (2) 몬테카를로: N명의 유저가 첫 성공까지 몇 번 뽑는지
+  const pulls = [];
+  for (let u = 0; u < N; u++) {
+    let i = 1;
+    while (i < hard && Math.random() >= probs[i - 1]) i++;
+    pulls.push(i);
+  }
+  const avg = pulls.reduce((s, v) => s + v, 0) / N;
+  const variance = pulls.reduce((s, v) => s + (v - avg) ** 2, 0) / N;
+  const std = Math.sqrt(variance);
+  const p50 = hard >= 50 ? (cum[49] * 100).toFixed(1) + "%" : "천장이 50회 미만이라 항상 100%";
+  document.getElementById("gacha-out-avg").textContent = avg.toFixed(1) + "회";
+  document.getElementById("gacha-out-std").textContent = "±" + std.toFixed(1);
+  document.getElementById("gacha-out-p50").textContent = p50;
+
+  const buckets = {};
+  pulls.forEach((v) => { buckets[v] = (buckets[v] || 0) + 1; });
+  const labels = Array.from({ length: hard }, (_, i) => i + 1);
+  const histData = labels.map((l) => buckets[l] || 0);
+  if (chartGachaHist) chartGachaHist.destroy();
+  chartGachaHist = new Chart(document.getElementById("chart-gacha-hist"), {
+    type: "bar",
+    data: { labels, datasets: [{ label: "유저 수 (첫 획득까지 걸린 뽑기 횟수)", data: histData, backgroundColor: "#fb923c" }] },
+    options: { animation: false, scales: { x: { title: { display: true, text: "뽑기 횟수" } }, y: { title: { display: true, text: "유저 수" } } } },
+  });
+}
+["gacha-base", "gacha-soft", "gacha-hard", "gacha-n"].forEach((id) => {
+  bindRange(id);
+  document.getElementById(id).addEventListener("input", renderGacha);
+});
+
+// ===== 7. 장비 파밍 확률 (비복원 가중추첨) =====
+// 가중치 비례 비복원 추첨에서, n줄을 뽑았을 때 targetIdx가 포함될 확률 (재귀)
+function probWeightedDraw(pool, targetIdx, n) {
+  if (n === 0 || !pool.some((w) => w.i === targetIdx)) return 0;
+  const tot = pool.reduce((s, w) => s + w.weight, 0);
+  let r = 0;
+  for (const w of pool) {
+    if (w.i === targetIdx) r += w.weight / tot;
+    else r += (w.weight / tot) * probWeightedDraw(pool.filter((x) => x.i !== w.i), targetIdx, n - 1);
+  }
+  return r;
+}
+function binom(n, k) {
+  let r = 1;
+  for (let i = 0; i < k; i++) r = (r * (n - i)) / (i + 1);
+  return r;
+}
+let chartFarm;
+function renderFarm() {
+  const rows = document.querySelectorAll("#farm-table tbody tr");
+  const all = [];
+  let targetIdx = -1;
+  const excludedIdx = [];
+  rows.forEach((tr, i) => {
+    const weight = +tr.querySelector(".fweight").value || 0;
+    all.push({ i, weight });
+    if (tr.querySelector(".fexclude").checked) excludedIdx.push(i);
+    if (tr.querySelector(".ftarget").checked) targetIdx = i;
+  });
+  if (targetIdx === -1) return;
+  const n = +document.getElementById("farm-lines").value;
+  const slots = +document.getElementById("farm-slots").value;
+  const pool = all.filter((w) => !excludedIdx.includes(w.i));
+  const p = excludedIdx.includes(targetIdx) ? 0 : probWeightedDraw(pool, targetIdx, n);
+
+  document.getElementById("farm-out-p").textContent = (p * 100).toFixed(1) + "%";
+  document.getElementById("farm-out-avg").textContent = p > 0 ? (1 / p).toFixed(1) + "개" : "획득 불가(제외됨)";
+
+  const labels = [], data = [];
+  for (let k = 0; k <= slots; k++) {
+    labels.push(k + "줄");
+    data.push(Math.round(binom(slots, k) * Math.pow(p, k) * Math.pow(1 - p, slots - k) * 1000) / 10);
+  }
+  if (chartFarm) chartFarm.destroy();
+  chartFarm = new Chart(document.getElementById("chart-farm"), {
+    type: "bar",
+    data: { labels, datasets: [{ label: "세트 안에 목표 부옵션이 이만큼 나올 확률(%)", data, backgroundColor: "#22c55e" }] },
+    options: { animation: false, scales: { y: { title: { display: true, text: "확률(%)" } } } },
+  });
+}
+document.getElementById("farm-run").addEventListener("click", renderFarm);
+document.querySelectorAll("#farm-table input, #farm-lines, #farm-slots").forEach((el) => {
+  el.addEventListener("change", renderFarm);
+});
+document.getElementById("farm-lines").addEventListener("input", renderFarm);
+document.getElementById("farm-slots").addEventListener("input", renderFarm);
+
+// 초기 렌더
+// ===== 탭 전환 =====
+function showTab(name) {
+  document.querySelectorAll(".tab-content").forEach((el) => { el.style.display = el.id === name ? "" : "none"; });
+  document.querySelectorAll(".tab-btn").forEach((btn) => btn.classList.toggle("active", btn.dataset.tab === name));
+  if (name === "tab-3") pullFromTab1();
+}
+document.querySelectorAll(".tab-btn").forEach((btn) => btn.addEventListener("click", () => showTab(btn.dataset.tab)));
+document.getElementById("btn-next-1").addEventListener("click", () => showTab("tab-2"));
+document.getElementById("btn-prev-2").addEventListener("click", () => showTab("tab-1"));
+document.getElementById("btn-next-2").addEventListener("click", () => showTab("tab-3"));
+document.getElementById("btn-prev-3").addEventListener("click", () => showTab("tab-2"));
+
+// ===== 3번 탭: 결과 대시보드 =====
+const finalState = { maxHp: 1000, curHp: 1000, hitCount: 0, timer: null };
+function pullFromTab1() {
+  setVal("final-atk", document.getElementById("dmg-atk").value);
+  setVal("final-def", document.getElementById("dmg-def").value);
+  setVal("final-k", document.getElementById("dmg-k").value);
+  setVal("final-hp", document.getElementById("dmg-hp").value);
+  setVal("final-aps", document.getElementById("base-aps").value); // 크리티컬은 1번 탭에 없는 개념이라 안 가져옴
+  finalState.maxHp = +document.getElementById("final-hp").value;
+  finalState.curHp = finalState.maxHp;
+  finalState.hitCount = 0;
+  renderFinal();
+  renderExpFinal();
+  startAutoAttack();
+}
+function computeFinalStats() {
+  const atk = +document.getElementById("final-atk").value;
+  const def = +document.getElementById("final-def").value;
+  const K = +document.getElementById("final-k").value;
+  const aps = +document.getElementById("final-aps").value;
+  const critRate = +document.getElementById("final-crit-rate").value; // %
+  const critDmg = +document.getElementById("final-crit-dmg").value;   // % (추가분)
+  const ratio = def / (def + K);
+  const dmg = Math.max(0, Math.round(atk * (1 - ratio)));
+  const expectedDmg = Math.round(dmg * (1 + (critRate / 100) * (critDmg / 100)));
+  return { atk, def, K, ratio, dmg, expectedDmg, aps, critRate, critDmg };
+}
+function renderFinal() {
+  const { ratio, dmg, expectedDmg, aps } = computeFinalStats();
+  const hp = +document.getElementById("final-hp").value;
+  if (finalState.maxHp !== hp) { finalState.maxHp = hp; finalState.curHp = hp; }
+  const ttkHits = expectedDmg > 0 ? Math.ceil(hp / expectedDmg) : "∞";
+  const ttkSec = typeof ttkHits === "number" ? (ttkHits / aps).toFixed(1) : "∞";
+  const ehp = Math.round(hp / (1 - ratio));
+  document.getElementById("final-out-dmg").textContent = dmg.toLocaleString();
+  document.getElementById("final-out-edmg").textContent = expectedDmg.toLocaleString();
+  document.getElementById("final-out-ratio").textContent = (ratio * 100).toFixed(1) + "%";
+  document.getElementById("final-out-ehp").textContent = ehp.toLocaleString();
+  document.getElementById("final-out-ttk").textContent = `${ttkHits} / ${ttkSec}s`;
+  updateFinalHpBar();
+}
+function updateFinalHpBar() {
+  const pct = finalState.maxHp > 0 ? Math.max(0, Math.round((finalState.curHp / finalState.maxHp) * 100)) : 0;
+  document.getElementById("final-hp-fill").style.width = pct + "%";
+  document.getElementById("final-hp-text").textContent = `${finalState.curHp.toLocaleString()} / ${finalState.maxHp.toLocaleString()}`;
+}
+// 자동 공격: 일정 간격으로 계속 때리고, 몇 타째인지 잠깐 표시했다가 사라진다
+function startAutoAttack() {
+  if (finalState.timer) clearInterval(finalState.timer);
+  document.getElementById("final-auto-status").textContent = "자동 공격 중...";
+  finalState.timer = setInterval(autoAttackTick, 700);
+}
+function stopAutoAttack(msg) {
+  if (finalState.timer) clearInterval(finalState.timer);
+  finalState.timer = null;
+  document.getElementById("final-auto-status").textContent = msg || "정지됨";
+}
+function autoAttackTick() {
+  if (finalState.curHp <= 0) { stopAutoAttack("처치 완료!"); return; }
+  const { dmg, critRate, critDmg } = computeFinalStats();
+  const isCrit = Math.random() * 100 < critRate;
+  const actualDmg = isCrit ? Math.round(dmg * (1 + critDmg / 100)) : dmg;
+  finalState.hitCount++;
+  finalState.curHp = Math.max(0, finalState.curHp - actualDmg);
+  updateFinalHpBar();
+
+  const indicator = document.getElementById("final-hit-indicator");
+  indicator.textContent = isCrit ? `${finalState.hitCount}타! 치명타!` : `${finalState.hitCount}타!`;
+  indicator.style.color = isCrit ? "#f59e0b" : "#ef4444";
+  indicator.classList.remove("show");
+  void indicator.offsetWidth; // 리플로우 강제 (같은 애니메이션 재실행 위해)
+  indicator.classList.add("show");
+
+  const box = document.querySelector(".fighter-monster");
+  box.style.animation = "none"; void box.offsetWidth; box.style.animation = "hitShake 0.4s ease";
+
+  if (finalState.curHp <= 0) stopAutoAttack("처치 완료! (총 " + finalState.hitCount + "타)");
+}
+document.getElementById("final-reset").addEventListener("click", () => {
+  finalState.curHp = finalState.maxHp;
+  finalState.hitCount = 0;
+  updateFinalHpBar();
+  startAutoAttack();
+});
+document.getElementById("final-pull").addEventListener("click", pullFromTab1);
+["final-atk", "final-def", "final-k", "final-hp", "final-aps", "final-crit-rate", "final-crit-dmg"].forEach((id) => {
+  bindRange(id);
+  document.getElementById(id).addEventListener("input", renderFinal);
+});
+
+let chartExpFinal;
+function renderExpFinal() {
+  const maxLv = +document.getElementById("exp-maxlv").value;
+  const expMax = +document.getElementById("exp-max").value;
+  const k = +document.getElementById("exp-k").value;
+  const labels = Array.from({ length: maxLv }, (_, i) => i + 1);
+  const cumulative = labels.map((lv) => Math.round(curveValue(0, expMax, k, lv, maxLv)));
+  if (chartExpFinal) chartExpFinal.destroy();
+  chartExpFinal = new Chart(document.getElementById("chart-exp-final"), {
+    type: "line",
+    data: { labels, datasets: [{ label: "누적 경험치", data: cumulative, borderColor: "#f59e0b", backgroundColor: "rgba(245,158,11,0.08)", fill: true, pointRadius: 0, tension: 0.2 }] },
+    options: { animation: false, scales: { y: { title: { display: true, text: "누적 경험치" } } } },
+  });
+}
+
+syncFromBase(); // 0→1→2→3→5 체인 전체를 초기값으로 한 번 맞춰둔다
+renderExp(); renderGacha(); renderFarm();
+</script>
+</body>
+</html>

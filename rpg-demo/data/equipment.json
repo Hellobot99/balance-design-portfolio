@@ -1,0 +1,8 @@
+{
+  "_placeholder": "C4(레벨:장비=4:6)를 시연하기 위한 예시 장비 1개씩. RPG_밸런스기획서.xlsx에 정식 장비 테이블이 아직 없어서 수치는 전부 임시값이다.",
+  "playerEquipment": {
+    "tank": { "name": "낡은 방패 (가칭)", "bonus": { "DEF": 25, "HP": 40 } },
+    "phys_dps": { "name": "녹슨 검 (가칭)", "bonus": { "ATK": 30 }, "fixedBonus": { "크리티컬확률": 0.05 } },
+    "mage_healer": { "name": "나무 지팡이 (가칭)", "bonus": { "지력": 25 }, "fixedBonus": { "치료효율": 5 } }
+  }
+}

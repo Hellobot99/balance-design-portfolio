@@ -1,0 +1,15 @@
+{
+  "_placeholder": "K(방어상수)는 실제 스탯 규모가 정해지지 않아 임시값이다. 1_스탯테이블 실제 값이 정해지면 재조정할 것. stagesPerRegion(D3: 지역당 5스테이지)과 perStageMultiplier(지역 내 점진적 증가, 임시 15%/스테이지)도 임시값. bossMultiplier(보스 배율)는 4_몬스터테이블 B4에서 결정한 값(1.5)으로 동기화됨.",
+  "defenseConstant": 50,
+  "expCurve": {
+    "lv1": 0,
+    "lv30": 10000,
+    "k": 0.6
+  },
+  "roundTable": {
+    "note": "원탁이론: 회피 판정을 먼저, 그 다음 치명타 판정 (우선순위 임시, B3 세부 순서 확정 필요)"
+  },
+  "stagesPerRegion": 5,
+  "perStageMultiplier": 0.15,
+  "bossMultiplier": 1.5
+}
