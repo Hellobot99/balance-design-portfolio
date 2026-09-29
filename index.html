@@ -63,6 +63,12 @@
   .card.ref { opacity: 0.85; }
   .card.ref .meta { color: var(--good); }
 
+  .mini { border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; margin-bottom: 10px; }
+  .mini h4 { margin: 0 0 6px; font-size: 14.5px; }
+  .mini .tag { color: var(--text-dim); font-size: 11px; font-family: var(--mono); font-weight: 400; margin-left: 8px; }
+  .mini p { margin: 0 0 8px; font-size: 13px; color: #c9d1d9; }
+  .mini a { font-size: 12px; font-family: var(--mono); color: var(--accent); text-decoration: none; }
+
   .thumbstrip { display: flex; gap: 10px; overflow-x: auto; margin: 4px 0 16px; padding-bottom: 4px; }
   .thumbstrip a { flex: 0 0 auto; text-align: center; text-decoration: none; }
   .thumbstrip img { height: 130px; width: auto; display: block; border: 1px solid var(--border);
@@ -210,6 +216,20 @@
     <div class="actions">
       <a href="https://github.com/Hellobot99/idle-runtime-server">GitHub</a>
     </div>
+  </div>
+
+  <h2 class="section">그 외 프로젝트</h2>
+
+  <div class="mini">
+    <h4>경매장 거래 시스템 <span class="tag">DB 팀플 · Java/JSP + Oracle</span></h4>
+    <p>물품 경매 등록·입찰·낙찰·수수료 정산을 트랜잭션으로 처리하는 실시간 거래 플랫폼. 데이터 무결성을 보장하는 DB 설계 실습.</p>
+    <a href="https://github.com/Hellobot99/Database_team_project">GitHub</a>
+  </div>
+
+  <div class="mini">
+    <h4>멀티플레이어 좀비 아포칼립스 텍스트 어드벤처 <span class="tag">시스템프로그래밍 팀플 · C/ncurses</span></h4>
+    <p>여러 플레이어가 동시 접속해 HP·EXP·골드·공격력·방어력을 관리하며, 다수결 투표로 분기형 스토리를 함께 진행하는 협동 게임. 소켓 프로그래밍 기반.</p>
+    <a href="https://github.com/Hellobot99/SP_TeamProject">GitHub</a>
   </div>
 
   <footer>
