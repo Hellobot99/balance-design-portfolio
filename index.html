@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>김태준 — 밸런스/시스템 기획 포트폴리오</title>
+<title>김태준 · 밸런스/시스템 기획 포트폴리오</title>
 <meta name="description" content="게임 서버 개발자에서 밸런스/시스템 기획자로 전환하며 직접 설계·구현·검증한 프로젝트 기록">
 <style>
   :root {
@@ -24,8 +24,7 @@
 
   header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px;
     padding-bottom: 28px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
-  header h1 { margin: 0 0 6px; font-size: 26px; font-weight: 700; }
-  header .role { color: var(--text-dim); font-size: 14px; }
+  header h1 { margin: 0; font-size: 26px; font-weight: 700; }
   .links { display: flex; gap: 10px; flex-wrap: wrap; }
   .links a { color: var(--text); text-decoration: none; font-size: 13px; font-family: var(--mono);
     padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; transition: border-color .15s, color .15s; }
@@ -74,7 +73,6 @@
   <header>
     <div>
       <h1>김태준</h1>
-      <div class="role">밸런스 / 시스템 기획 · 경북대 컴퓨터공학과 4학년</div>
     </div>
     <div class="links">
       <a href="mailto:ktj4060@gmail.com">Email</a>
@@ -97,14 +95,14 @@
   <h2 class="section">밸런스 / 시스템 기획</h2>
 
   <div class="card">
-    <h3>몬스터 배틀 JRPG — 전투·성장 시스템 처음부터 설계</h3>
+    <h3>몬스터 배틀 JRPG: 전투·성장 시스템 처음부터 설계</h3>
     <div class="meta">2026.09 · 오리지널 IP · 전투 공식 / 스탯 설계 / 웹 구현</div>
     <div class="summary">
       정통 JRPG 파티 구조(탱커 · 물리딜러 · 마법딜러/힐러 3인)를 오리지널 몬스터로 재구성해,
       전투 공식부터 레벨 성장 곡선까지 직접 설계하고 웹으로 구현해 실제 플레이 가능한 상태까지 만들었습니다.
     </div>
     <ul>
-      <li>대미지 공식을 3차례 재설계 — ATK를 모든 공격의 기본값으로 두고, 힘/지력을 <b>스킬별 계수(coefs)</b>로 분리해
+      <li>대미지 공식을 3차례 재설계: ATK를 모든 공격의 기본값으로 두고, 힘/지력을 <b>스킬별 계수(coefs)</b>로 분리해
         스킬마다 물리/마법 배분을 독립적으로 가질 수 있는 구조로 일반화</li>
       <li>"가치 검증" 표를 직접 만들어 탱커/물리딜러/마법딜러 3종족의 종합 전투력을 Lv1·Lv30 기준
         <b>100% / 100% / 100%</b>로 정확히 맞춤 (ATK·DEF·HP·힘·지력의 환산 배율을 역산해서 결정)</li>
@@ -150,7 +148,7 @@
     <ul>
       <li>DEF = 200 + 10×Lv 등 실제 공식을 데이터로 역산해서 검증하고, 곱셈형 방어 공식의 구조를 정리</li>
       <li>레벨업 : 광추 : 유물 육성 비중을 <b>1 : 0.8 : 2</b>로 정량화</li>
-      <li>SPD 부옵션 가중치를 4→5로 올리는 개선안을 확률 계산으로 검증 — 체감 등장률 19.6%→23.7%,
+      <li>SPD 부옵션 가중치를 4→5로 올리는 개선안을 확률 계산으로 검증: 체감 등장률 19.6%→23.7%,
         목표 도달에 필요한 개수 5.1개→4.21개</li>
     </ul>
     <div class="actions">
@@ -159,7 +157,7 @@
   </div>
 
   <div class="card">
-    <h3>Project-Idle-Runtime — 사이버펑크 방치형 게임 기획</h3>
+    <h3>Project-Idle-Runtime: 사이버펑크 방치형 게임 기획</h3>
     <div class="meta">사이버펑크 방치형 성장 게임 · 기획 + 서버(C++ IOCP)·클라이언트(Unity) 직접 구현</div>
     <div class="summary">
       해커가 되어 거대 기업("메가코프")의 서버를 해킹하는 사이버펑크 방치형 게임. 핵심 루프는
@@ -167,7 +165,7 @@
       경제·성장·소셜/라이브·UI/UX를 각각 별도 문서로 기획하고 실제 서버·클라이언트까지 직접 구현했습니다.
     </div>
     <ul>
-      <li>CPS(초당 크레딧 획득량) 중심의 경제 구조 — 자동 해킹(실시간 CPS)과 수동 클릭(위협도의 5% 추가 데미지)을
+      <li>CPS(초당 크레딧 획득량) 중심의 경제 구조: 자동 해킹(실시간 CPS)과 수동 클릭(위협도의 5% 추가 데미지)을
         같은 재화로 수렴시켜 하이브리드 방치형 루프를 설계</li>
       <li>메가코프 서버 해킹을 5단계 보안 레이어(방화벽 → 게이트키퍼 → 메인프레임 등)로 나누고,
         보스전 실패 시 이전 단계로 후퇴해 파밍 모드로 전환되는 진행 로직 설계</li>
